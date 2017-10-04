@@ -33,8 +33,8 @@ class Split(object):
         return self.is_valid() and self.impurity < other_split.impurity
 
 
-def get_num_samples_per_side(num_samples, left_values, right_values,
-                             num_samples_per_value):
+def get_num_samples_per_side(num_samples, num_samples_per_value, left_values,
+                             right_values):
     """Returns two sets, each containing the values of a split side."""
     if len(left_values) <= len(right_values):
         num_left_samples = sum(num_samples_per_value[value]
@@ -47,7 +47,7 @@ def get_num_samples_per_side(num_samples, left_values, right_values,
     return  num_left_samples, num_right_samples
 
 
-def get_num_samples_per_class(values, contingency_table):
+def get_num_samples_per_class(contingency_table, values):
     """Returns a list, i-th entry contains the number of samples of class i."""
     num_classes = contingency_table.shape[1]
     num_samples_per_class = [0] * num_classes
