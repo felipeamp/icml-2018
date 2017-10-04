@@ -216,8 +216,69 @@ def calculate_information(contingency_table, values, num_split_samples):
 
 
 
+def sliq(tree_node, attrib_index):
+    """Gets the attribute's best split according to the SLIQ."""
+    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[
+        attrib_index].contingency_table
+    num_samples_per_value = tree_node.contingency_tables[
+        attrib_index].num_samples_per_value
+    best_split = split.Split(left_values=set(all_values),
+                             right_values=set())
+    while best_split.left_values:
+        iteration_best_split = split.Split()
+        for value in best_split.left_values:
+            curr_left_values = best_split.left_values - set([value])
+            curr_right_values = best_split.right_values + set([value])
+            curr_split_gini = calculate_split_gini_index(num_samples,
+                                                         contingency_table,
+                                                         num_samples_per_value,
+                                                         curr_left_values,
+                                                         curr_right_values)
+            curr_split = split.Split(left_values=curr_left_values,
+                                     right_values=curr_right_values,
+                                     impurity=curr_split_gini)
+            if curr_split.is_better_than(iteration_best_split):
+                iteration_best_split = curr_split
+        if iteration_best_split.is_better_than(best_split):
+            best_split = iteration_best_split
+        else:
+            break
+    return best_split
 
 
+def sliq_ext(tree_node, attrib_index):
+    """Gets the attribute's best split according to the SLIQ-ext."""
+    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[
+        attrib_index].contingency_table
+    num_samples_per_value = tree_node.contingency_tables[
+        attrib_index].num_samples_per_value
+    best_split = split.Split()
+    iteration_start_split = split.Split(left_values=set(all_values),
+                                        right_values=set())
+    while iteration_start_split.left_values:
+        iteration_best_split = split.Split()
+        for value in iteration_start_split.left_values:
+            curr_left_values = iteration_start_split.left_values - set([value])
+            curr_right_values = (
+                iteration_start_split.right_values + set([value]))
+            curr_split_gini = calculate_split_gini_index(num_samples,
+                                                         contingency_table,
+                                                         num_samples_per_value,
+                                                         curr_left_values,
+                                                         curr_right_values)
+            curr_split = split.Split(left_values=curr_left_values,
+                                     right_values=curr_right_values,
+                                     impurity=curr_split_gini)
+            if curr_split.is_better_than(iteration_best_split):
+                iteration_best_split = curr_split
+        if iteration_best_split.is_better_than(best_split):
+            best_split = iteration_best_split
+        iteration_start_split = iteration_best_split
+    return best_split
 
 
 
