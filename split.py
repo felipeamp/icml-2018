@@ -76,7 +76,7 @@ def get_num_samples_per_side(num_samples, num_samples_per_value, left_values,
     else:
         num_right_samples = sum(num_samples_per_value[value]
                                 for value in right_values)
-        num_left_samples = num_samples - right_values
+        num_left_samples = num_samples - num_right_samples
     return  num_left_samples, num_right_samples
 
 

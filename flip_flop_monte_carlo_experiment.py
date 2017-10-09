@@ -30,7 +30,7 @@ SEED = 31051988
 
 def run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver):
     """Runs the given experiment and saves it in the result_saver."""
-    best_split = criterion.find_best_split_fn(tree_node=tree_node, attrib_index=0)
+    best_split = criterion.find_best_split_fn(tree_node=curr_tree_node, attrib_index=0)
     best_impurity_found = split_impurity_fn(
         curr_tree_node.dataset.num_samples,
         curr_tree_node.contingency_tables[0].contingency_table,

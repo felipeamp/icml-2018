@@ -24,7 +24,8 @@ class MonteCarloResultSaver(object):
                              os.path.dirname(csv_output_path))
         self.csv_output_path = csv_output_path
         # self.results[(num_values, num_classes)][criterion_name] = (impurity, num_iterations)
-        self.results = collections.defaultdict(collections.defaultdict(list))
+        criterion_results_ctor = lambda: collections.defaultdict(list)
+        self.results = collections.defaultdict(criterion_results_ctor)
 
     def store_result(self, num_values, num_classes, criterion_name, best_impurity_found,
                      num_iterations_when_converged):
