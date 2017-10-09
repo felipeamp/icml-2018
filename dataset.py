@@ -65,7 +65,7 @@ class Dataset(object):
     """
 
     def __init__(self, training_dataset_csv_filepath, key_attrib_index, class_attrib_index,
-                 split_char, missing_value_string, load_numeric=False):
+                 split_char, missing_value_string, load_numeric=False, load_dataset=True):
         # Init variables to default value
         self.attrib_names = []
         self.num_classes = 0
@@ -102,8 +102,9 @@ class Dataset(object):
         self.load_train_dataset_time_taken = None
         self.load_numeric = load_numeric
 
-        self._load_train_dataset(split_char, missing_value_string)
-        self._print_loaded_information()
+        if load_dataset:
+            self._load_train_dataset(split_char, missing_value_string)
+            self._print_loaded_information()
 
     def _load_train_dataset(self, split_char, missing_value_string):
         # TESTED!

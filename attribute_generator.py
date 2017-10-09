@@ -7,7 +7,7 @@ import numpy as np
 
 
 class RandomAttributeGenerator(object):
-    """Generator of random attribute as in Coppersmith.
+    """Singleton generator of random attribute as in Coppersmith.
 
     Entries in contingency table are integers i.i.d. uniformily in [0, 7].
     """

@@ -3,6 +3,7 @@
 
 """Module containing all criteria available for tests."""
 
+import functools
 import math
 import operator
 import random
@@ -29,7 +30,7 @@ class Criterion(object):
                 tree_node.valid_nominal_attribute):
             if is_valid_nominal_attrib:
                 attrib_best_split = self.find_best_split_fn(
-                    tree_node, attrib_index)
+                    tree_node=tree_node, attrib_index=attrib_index)
                 best_splits.append(attrib_best_split)
             else:
                 best_splits.append([])
@@ -225,11 +226,8 @@ def information_gain(tree_node, attrib_index):
     best_split = split.Split()
     for left_values in split.powerset_using_symmetry(all_values):
         right_values = all_values - left_values
-        num_left_samples, num_right_samples = split.get_num_samples_per_side(
-            num_samples, num_samples_per_value, left_values, right_values)
         split_information_gain = calculate_information_gain(
-            num_samples, contingency_table, left_values, right_values,
-            num_left_samples, num_right_samples)
+            num_samples, contingency_table, num_samples_per_value, left_values, right_values)
         curr_split = split.Split(left_values=left_values,
                                  right_values=right_values,
                                  impurity=split_information_gain)
@@ -269,19 +267,17 @@ def gain_ratio(tree_node, attrib_index):
 def calculate_gain_ratio(num_samples, contingency_table, num_samples_per_value,
                          left_values, right_values):
     """Calculates the Gain Ratio of the given binary split."""
-    num_left_samples, num_right_samples = split.get_num_samples_per_side(
-        num_samples, num_samples_per_value, left_values, right_values)
     split_information_gain = calculate_information_gain(
-        num_samples, contingency_table, left_values, right_values,
-        num_left_samples, num_right_samples)
+        num_samples, contingency_table, num_samples_per_value, left_values, right_values)
     potential_partition_information = calculate_potential_information(
-        num_samples, num_left_samples, num_right_samples)
+        num_samples, num_samples_per_value, left_values, right_values)
     return split_information_gain / potential_partition_information
 
 
-def calculate_potential_information(num_samples, num_left_samples,
-                                    num_right_samples):
+def calculate_potential_information(num_samples, num_samples_per_value, left_values, right_values):
     """Calculates the Potential Information of the given binary split."""
+    num_left_samples, num_right_samples = split.get_num_samples_per_side(
+        num_samples, num_samples_per_value, left_values, right_values)
     left_ratio = num_left_samples / num_samples
     right_ratio = num_right_samples / num_samples
     partition_potential_information = (
@@ -289,10 +285,11 @@ def calculate_potential_information(num_samples, num_left_samples,
         - right_ratio * math.log2(right_ratio))
     return partition_potential_information
 
-def calculate_information_gain(num_samples, contingency_table, left_values,
-                               right_values, num_left_samples,
-                               num_right_samples):
+def calculate_information_gain(num_samples, contingency_table, num_samples_per_value, left_values,
+                               right_values):
     """Calculates the Information Gain of the given binary split."""
+    num_left_samples, num_right_samples = split.get_num_samples_per_side(
+        num_samples, num_samples_per_value, left_values, right_values)
     num_samples_per_class_left = split.get_num_samples_per_class_in_values(
         contingency_table, left_values)
     left_split_information = calculate_information(
@@ -400,7 +397,7 @@ def flip_flop(partition_init_fn, tree_node, attrib_index, node_impurity_fn):
     best_split = split.Split(left_values=left_values,
                              right_values=right_values,
                              impurity=curr_split_gini_index)
-    for _ in range(MAX_ITERATIONS):
+    for iteration_number in range(1, MAX_ITERATIONS + 1):
         # Use values split as 2 supervalues and create binary split of classes.
         smaller_values_set = split.get_smaller_set(best_split.left_values,
                                                    best_split.right_values)
@@ -420,14 +417,16 @@ def flip_flop(partition_init_fn, tree_node, attrib_index, node_impurity_fn):
             num_samples, superclasses_contingency_table, num_samples_per_value,
             node_impurity_fn)
         if curr_split == best_split:
+            best_split.set_iteration_number(iteration_number)
             break
         else:
             best_split = curr_split
     return best_split
 
 
-def create_random_partition(num_values):
+def create_random_partition(tree_node, attrib_index, _):
     """Creates a random partition of the integer values in [0, num_values)."""
+    num_values = tree_node.contingency_tables[attrib_index].contingency_table.shape[0]
     left_values = set()
     right_values = set()
     for value in range(num_values):
@@ -438,8 +437,8 @@ def create_random_partition(num_values):
     return left_values, right_values
 
 
-def init_with_max(tree_node, attrib_index, node_impurity_fn):
-    """Generates a split grouping classes in superclasses, largest  one alone.
+def init_with_largest_alone(tree_node, attrib_index, node_impurity_fn):
+    """Generates a split grouping classes in superclasses, largest one alone.
     """
     def split_max(num_samples_per_index):
         """Returns the index with the largest count."""
@@ -508,3 +507,31 @@ def init_with_list_scheduling(tree_node, attrib_index, node_impurity_fn):
                                 num_samples_per_value,
                                 node_impurity_fn)
     return curr_split.left_values, curr_split.right_values
+
+
+RANDOM_FLIPFLOP_GINI = Criterion(
+    "Random-FlipFlop-Gini",
+    functools.partial(flip_flop,
+                      partition_init_fn=create_random_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+LARGEST_ALONE_FLIPFLOP_GINI = Criterion(
+    "LargestAlone-FlipFlop-Gini",
+    functools.partial(flip_flop,
+                      partition_init_fn=init_with_largest_alone,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+RANDOM_FLIPFLOP_ENTROPY = Criterion(
+    "Random-FlipFlop-Entropy",
+    functools.partial(flip_flop,
+                      partition_init_fn=create_random_partition,
+                      node_impurity_fn=calculate_information))
+
+
+LIST_SCHEDULING_FLIPFLOP_ENTROPY = Criterion(
+    "ListScheduling-FlipFlop-Entropy",
+    functools.partial(flip_flop,
+                      partition_init_fn=init_with_list_scheduling,
+                      node_impurity_fn=calculate_information))

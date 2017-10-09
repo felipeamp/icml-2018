@@ -22,6 +22,11 @@ class Split(object):
         else:
             self.right_values = right_values
         self.impurity = impurity
+        self.iteration_number = None
+
+    def set_iteration_number(self, iteration_number):
+        """Saves iteration number of the given split."""
+        self.iteration_number = iteration_number
 
     def is_valid(self):
         """Indicates whether the Split is valid."""

@@ -36,7 +36,7 @@ class TreeNode(object):
             the i-th attribute from the dataset is valid and nominal or not.
         num_valid_samples (int): number of training samples in this TreeNode.
     """
-    def __init__(self, curr_dataset, valid_nominal_attribute):
+    def __init__(self, curr_dataset, valid_nominal_attribute, calculate_contingency_tables=True):
         """Initializes a TreeNode instance with the given arguments.
 
         Args:
@@ -48,7 +48,8 @@ class TreeNode(object):
         self.dataset = curr_dataset
         self.valid_nominal_attribute = valid_nominal_attribute
         self.all_best_splits = None
-        self.contingency_tables = self._calculate_contingency_tables()
+        if calculate_contingency_tables:
+            self.contingency_tables = self._calculate_contingency_tables()
 
     def _calculate_contingency_tables(self):
         contingency_tables = [] # list of ContingencyTable
