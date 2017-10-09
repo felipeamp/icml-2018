@@ -100,7 +100,7 @@ def get_best_split(num_samples, contingency_table, num_samples_per_value,
     num_values = len(num_samples_per_value)
     num_classes = contingency_table.shape[1]
     values_sorted_per_count = get_indices_sorted_per_count(
-        contingency_table[0, :])
+        contingency_table[:, 0])
     # We start with the (invalid) split where every value is on the right side.
     curr_split = split.Split(left_values=set(),
                              right_values=set(range(num_values)))
