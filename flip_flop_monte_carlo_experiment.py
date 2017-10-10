@@ -25,7 +25,7 @@ CRITERIA_AND_SPLIT_IMPURITY_FN = [
     (criteria.RANDOM_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
     (criteria.LIST_SCHEDULING_FLIPFLOP_ENTROPY, criteria.calculate_information_gain)]
 
-SEED = 31051988
+SEED = 19880531
 
 
 def run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver):
@@ -49,7 +49,7 @@ def create_fake_tree_node(contingency_table):
     fake_dataset.num_classes = num_classes
     fake_dataset.num_samples = np.sum(contingency_table)
     fake_tree_node = tree_node.TreeNode(fake_dataset, [True], calculate_contingency_tables=False)
-    num_samples_per_value = np.sum(contingency_table, axis=0)
+    num_samples_per_value = np.sum(contingency_table, axis=1)
     fake_tree_node.contingency_tables = [
         tree_node.ContingencyTable(contingency_table, num_samples_per_value)]
     return fake_tree_node
@@ -59,14 +59,16 @@ def main(csv_output_filepath):
     """Runs all experiments defined by the cartesian product of this module global variables."""
     result_saver = monte_carlo_result_saver.MonteCarloResultSaver(csv_output_filepath)
     attribute_generator.RandomAttributeGenerator.seed(SEED)
-    for (num_values, num_classes) in PAIR_NUM_VALUES_CLASSES:
-        for _ in range(NUM_MONTE_CARLO_EXPERIMENTS):
-            contingency_table = attribute_generator.RandomAttributeGenerator.generate(
-                num_values, num_classes)
-            curr_tree_node = create_fake_tree_node(contingency_table)
-            for criterion, split_impurity_fn in CRITERIA_AND_SPLIT_IMPURITY_FN:
-                run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver)
-    result_saver.write_csv()
+    try:
+        for (num_values, num_classes) in PAIR_NUM_VALUES_CLASSES:
+            for _ in range(NUM_MONTE_CARLO_EXPERIMENTS):
+                contingency_table = attribute_generator.RandomAttributeGenerator.generate(
+                    num_values, num_classes)
+                curr_tree_node = create_fake_tree_node(contingency_table)
+                for criterion, split_impurity_fn in CRITERIA_AND_SPLIT_IMPURITY_FN:
+                    run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver)
+    finally:
+        result_saver.write_csv()
 
 
 if __name__ == '__main__':

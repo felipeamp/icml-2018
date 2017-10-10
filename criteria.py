@@ -74,6 +74,8 @@ def calculate_split_gini_index(num_samples, contingency_table,
 def calculate_node_gini_index(num_split_samples,
                               num_samples_per_class_in_split):
     """Calculates the Gini index of a node."""
+    if not num_split_samples:
+        return 0.0
     gini_index = 1.0
     for curr_class_num_samples in num_samples_per_class_in_split:
         gini_index -= (curr_class_num_samples / num_split_samples)**2
@@ -114,7 +116,7 @@ def get_best_split(num_samples, contingency_table, num_samples_per_value,
     num_samples_per_class_right = split.get_num_samples_per_class_in_values(
         contingency_table, curr_split.right_values)
     for last_left_value in values_sorted_per_count[:-1]:
-        left_values = curr_split.left_values + set([last_left_value])
+        left_values = curr_split.left_values | set([last_left_value])
         right_values = curr_split.right_values - set([last_left_value])
         # Update the variables needed for the impurity calculation using a
         # dynamic programming approach.
@@ -146,7 +148,7 @@ def gini_gain(tree_node, attrib_index):
     Calculates and returns the weighted Gini Index instead of the actual Gini
     Gain.
     """
-    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    all_values = set(range(tree_node.contingency_tables[attrib_index].contingency_table.shape[0]))
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
@@ -185,13 +187,13 @@ def get_contingency_table_for_superclasses(
         for value in range(num_values)]
     superclasses_contingency_table = np.array(
         [num_samples_per_value_from_left_classes,
-         num_samples_per_value_from_right_classes], dtype=int)
+         num_samples_per_value_from_right_classes], dtype=int).T
     return superclasses_contingency_table
 
 
 def twoing(tree_node, attrib_index):
     """Gets the attribute's best split according to the Twoing criterion."""
-    num_values, num_classes = tree_node.contingency_tables[attrib_index].shape
+    num_values, num_classes = tree_node.contingency_tables[attrib_index].contingency_table.shape
     all_classes = set(range(num_classes))
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
@@ -217,7 +219,7 @@ def information_gain(tree_node, attrib_index):
     Calculates and returns the Information Gain of the child nodes, without
     taking into account the original information.
     """
-    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    all_values = set(range(tree_node.contingency_tables[attrib_index].contingency_table.shape[0]))
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
@@ -242,7 +244,7 @@ def gain_ratio(tree_node, attrib_index):
     Calculates and returns the Gain Ratio of the child nodes, without taking
     into account the original information.
     """
-    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    all_values = set(range(tree_node.contingency_tables[attrib_index].contingency_table.shape[0]))
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
@@ -316,7 +318,7 @@ def calculate_information(num_split_samples, num_samples_per_class_in_split):
 
 def sliq(tree_node, attrib_index):
     """Gets the attribute's best split according to the SLIQ criterion."""
-    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    all_values = set(range(tree_node.contingency_tables[attrib_index].contingency_table.shape[0]))
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
@@ -328,7 +330,7 @@ def sliq(tree_node, attrib_index):
         iteration_best_split = split.Split()
         for value in best_split.left_values:
             curr_left_values = best_split.left_values - set([value])
-            curr_right_values = best_split.right_values + set([value])
+            curr_right_values = best_split.right_values | set([value])
             curr_split_gini = calculate_split_gini_index(num_samples,
                                                          contingency_table,
                                                          num_samples_per_value,
@@ -348,7 +350,7 @@ def sliq(tree_node, attrib_index):
 
 def sliq_ext(tree_node, attrib_index):
     """Gets the attribute's best split according to the SLIQ-ext criterion."""
-    all_values = set(range(tree_node.contingency_tables[attrib_index].shape[0]))
+    all_values = set(range(tree_node.contingency_tables[attrib_index].contingency_table.shape[0]))
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
@@ -362,7 +364,7 @@ def sliq_ext(tree_node, attrib_index):
         for value in iteration_start_split.left_values:
             curr_left_values = iteration_start_split.left_values - set([value])
             curr_right_values = (
-                iteration_start_split.right_values + set([value]))
+                iteration_start_split.right_values | set([value]))
             curr_split_gini = calculate_split_gini_index(num_samples,
                                                          contingency_table,
                                                          num_samples_per_value,
@@ -384,7 +386,7 @@ def flip_flop(partition_init_fn, tree_node, attrib_index, node_impurity_fn):
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
-    transposed_contingency_table = contingency_table.T
+    transposed_contingency_table = np.copy(contingency_table).T
     num_values, num_classes = contingency_table.shape
     num_samples_per_value = tree_node.contingency_tables[
         attrib_index].num_samples_per_value
@@ -452,7 +454,7 @@ def init_with_largest_alone(tree_node, attrib_index, node_impurity_fn):
     num_samples_per_class = split.get_num_samples_per_class(
         contingency_table)
     left_class = split_max(num_samples_per_class)
-    num_values = tree_node.contingency_tables[attrib_index].shape[0]
+    num_values = tree_node.contingency_tables[attrib_index].contingency_table.shape[0]
     num_samples_per_value = tree_node.contingency_tables[
         attrib_index].num_samples_per_value
     superclasses_contingency_table = get_contingency_table_for_superclasses(
@@ -501,7 +503,7 @@ def init_with_list_scheduling(tree_node, attrib_index, node_impurity_fn):
         for value in range(num_values)]
     superclasses_contingency_table = np.array(
         [num_samples_per_value_from_left_classes,
-         num_samples_per_value_from_right_classes], dtype=int)
+         num_samples_per_value_from_right_classes], dtype=int).T
     curr_split = get_best_split(num_samples,
                                 superclasses_contingency_table,
                                 num_samples_per_value,

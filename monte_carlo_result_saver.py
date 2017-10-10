@@ -44,7 +44,9 @@ class MonteCarloResultSaver(object):
                 for (num_values, num_classes) in pair_num_values_classes:
                     for criterion_name in criteria:
                         (best_impurity_found, num_iterations_when_converged) = self.results[
-                            (num_values, num_classes)][criterion_name]
-                        line_list = [num_values, num_classes, experiment_num + 1, criterion_name,
-                                     best_impurity_found, num_iterations_when_converged]
+                            (num_values, num_classes)][criterion_name][experiment_num]
+                        line_list = map(str,
+                                        [num_values, num_classes, experiment_num + 1,
+                                         criterion_name, best_impurity_found,
+                                         num_iterations_when_converged])
                         print(','.join(line_list), file=fout)
