@@ -7,17 +7,15 @@ import numpy as np
 
 
 class RandomAttributeGenerator(object):
-    """Singleton generator of random attribute as in Coppersmith.
+    """Generator of random attribute as in Coppersmith.
 
     Entries in contingency table are integers i.i.d. uniformily in [0, 7].
     """
-    @classmethod
-    def seed(cls, seed):
-        """Sets the RNG seed to the given value."""
+
+    def __init__(self, seed):
         np.random.seed(seed)
 
-    @classmethod
-    def generate(cls, num_values, num_classes):
+    def generate(self, num_values, num_classes):
         """Returns random attribute with the given number of values and classes.
         """
         return np.random.randint(0, 8, (num_values, num_classes))

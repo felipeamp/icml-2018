@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-"""Module that runs Monte Carlo experiments with flip flop criterion using different inits."""
+"""Module that runs Monte Carlo experiments with different criterion using different inits."""
 
 import argparse
 import random
@@ -26,15 +26,13 @@ CRITERIA_AND_SPLIT_IMPURITY_FN = [
     (criteria.LIST_SCHEDULING_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
     (criteria.RANDOM_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
     (criteria.LIST_SCHEDULING_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LARGEST_ALONE_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.RANDOM_FLIPFLOP2_GINI, criteria.calculate_split_gini_index),
-    (criteria.LARGEST_ALONE_FLIPFLOP2_GINI, criteria.calculate_split_gini_index),
-    (criteria.LIST_SCHEDULING_FLIPFLOP2_GINI, criteria.calculate_split_gini_index),
-    (criteria.RANDOM_FLIPFLOP2_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LIST_SCHEDULING_FLIPFLOP2_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LARGEST_ALONE_FLIPFLOP2_ENTROPY, criteria.calculate_information_gain)]
+    (criteria.LARGEST_ALONE_FLIPFLOP_ENTROPY, criteria.calculate_information_gain)]
 
 SEED = 19880531
+
+
+def remove_flipflop_from_name(criterion_name):
+    return criterion_name.replace("-FlipFlop", "")
 
 
 def run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver):
@@ -47,8 +45,8 @@ def run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver):
         best_split.left_values,
         best_split.right_values)
     num_values, num_classes = curr_tree_node.contingency_tables[0].contingency_table.shape
-    result_saver.store_result(num_values, num_classes, criterion.name, best_impurity_found,
-                              best_split.iteration_number)
+    result_saver.store_result(num_values, num_classes, remove_flipflop_from_name(criterion.name),
+                              best_impurity_found, best_split.iteration_number)
 
 
 def create_fake_tree_node(contingency_table):
@@ -66,6 +64,7 @@ def create_fake_tree_node(contingency_table):
 
 def main(csv_output_filepath):
     """Runs all experiments defined by the cartesian product of this module global variables."""
+    criteria.MAX_ITERATIONS = 0
     result_saver = monte_carlo_result_saver.MonteCarloResultSaver(csv_output_filepath)
     attrib_gen = attribute_generator.RandomAttributeGenerator(SEED)
     random.seed(SEED)

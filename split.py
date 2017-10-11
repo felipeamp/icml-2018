@@ -6,6 +6,8 @@
 import itertools
 import math
 
+import numpy as np
+
 EPSILON = 1e-6
 
 
@@ -30,8 +32,7 @@ class Split(object):
 
     def is_valid(self):
         """Indicates whether the Split is valid."""
-        return (self.left_values is not None and
-                self.right_values is not None and
+        return ((self.left_values or self.right_values) and
                 math.isfinite(self.impurity))
 
     def is_better_than(self, other_split):
@@ -39,9 +40,10 @@ class Split(object):
         return self.is_valid() and self.impurity < other_split.impurity
 
     def __eq__(self, other_split):
-        """Indicates whether the self Split is better than the given one."""
-        return (self.left_values == other_split.left_values and
-                self.right_values == other_split.right_values)
+        """Indicates whether the self Split is equal to the given one, in values OR in impurity."""
+        return ((self.left_values == other_split.left_values and
+                 self.right_values == other_split.right_values) or
+                math.isclose(self.impurity, other_split.impurity))
 
 
 def powerset_using_symmetry(values):
@@ -107,7 +109,7 @@ def get_smaller_set(set_1, set_2):
 
 def get_num_samples_per_value_in_classes(contingency_table, classes):
     """Returns a list, i-th entry contains the number of samples of value i."""
-    return get_num_samples_per_class_in_values(contingency_table.T, classes)
+    return get_num_samples_per_class_in_values(np.copy(contingency_table).T, classes)
 
 
 def get_num_samples_per_value_from_class(contingency_table, class_index):
