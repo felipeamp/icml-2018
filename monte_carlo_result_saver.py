@@ -19,9 +19,9 @@ class MonteCarloResultSaver(object):
     def __init__(self, csv_output_path):
         if os.path.exists(csv_output_path):
             raise ValueError("csv_output_path (%s) must be a non-existent file." % csv_output_path)
-        if not os.path.exists(os.path.dirname(csv_output_path)):
-            raise ValueError("The directory to contain the output csv (%s) must exist." %
-                             os.path.dirname(csv_output_path))
+        dirname = os.path.dirname(csv_output_path)
+        if dirname and not os.path.exists(dirname):
+            raise ValueError("The directory to contain the output csv (%s) must exist." % dirname)
         self.csv_output_path = csv_output_path
         # self.results[(num_values, num_classes)][criterion_name] = (impurity, num_iterations)
         criterion_results_ctor = lambda: collections.defaultdict(list)
