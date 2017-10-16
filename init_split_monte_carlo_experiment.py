@@ -82,8 +82,8 @@ def main(csv_output_filepath):
                 curr_tree_node = create_fake_tree_node(contingency_table)
                 for criterion, split_impurity_fn in CRITERIA_AND_SPLIT_IMPURITY_FN:
                     if (num_values > 12 and
-                            (criterion.name == INFORMATION_GAIN.name or
-                             criterion.name == GINI_GAIN.name)):
+                            (criterion.name == criteria.INFORMATION_GAIN.name or
+                             criterion.name == criteria.GINI_GAIN.name)):
                         continue
                     run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver)
     finally:
