@@ -13,7 +13,8 @@ class RandomAttributeGenerator(object):
     """
 
     def __init__(self, seed):
-        np.random.seed(seed)
+        if seed:
+            np.random.seed(seed)
 
     def generate(self, num_values, num_classes):
         """Returns random attribute with the given number of values and classes.
