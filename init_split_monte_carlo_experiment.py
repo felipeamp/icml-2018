@@ -24,9 +24,16 @@ CRITERIA_AND_SPLIT_IMPURITY_FN = [
     (criteria.RANDOM_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
     (criteria.LARGEST_ALONE_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
     (criteria.LIST_SCHEDULING_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
+    (criteria.RANDOM_CLASS_PARTITION_GINI, criteria.calculate_split_gini_index),
+    (criteria.TWOING_GINI, criteria.calculate_split_gini_index),
+    (criteria.GINI_GAIN, criteria.calculate_split_gini_index),
     (criteria.RANDOM_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
     (criteria.LIST_SCHEDULING_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LARGEST_ALONE_FLIPFLOP_ENTROPY, criteria.calculate_information_gain)]
+    (criteria.LARGEST_ALONE_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
+    (criteria.RANDOM_CLASS_PARTITION_ENTROPY, criteria.calculate_information_gain),
+    (criteria.TWOING_ENTROPY, criteria.calculate_information_gain),
+    (criteria.INFORMATION_GAIN, criteria.calculate_information_gain)
+    ]
 
 SEED = 19880531
 
@@ -74,6 +81,10 @@ def main(csv_output_filepath):
                 contingency_table = attrib_gen.generate(num_values, num_classes)
                 curr_tree_node = create_fake_tree_node(contingency_table)
                 for criterion, split_impurity_fn in CRITERIA_AND_SPLIT_IMPURITY_FN:
+                    if (num_values > 12 and
+                            (criterion.name == INFORMATION_GAIN.name or
+                             criterion.name == GINI_GAIN.name)):
+                        continue
                     run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver)
     finally:
         result_saver.write_csv()
