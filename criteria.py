@@ -186,7 +186,7 @@ def get_contingency_table_for_superclasses(
     return superclasses_contingency_table
 
 
-def twoing(tree_node, attrib_index, node_impurity_fn, split_impurity_fn):
+def twoing_superclass_partition(tree_node, attrib_index, node_impurity_fn):
     """Gets the attribute's best split according to the Twoing criterion."""
     num_values, num_classes = tree_node.contingency_tables[attrib_index].contingency_table.shape
     all_classes = set(range(num_classes))
@@ -203,11 +203,29 @@ def twoing(tree_node, attrib_index, node_impurity_fn, split_impurity_fn):
                                     superclasses_contingency_table,
                                     num_samples_per_value,
                                     node_impurity_fn)
-        curr_split.impurity = split_impurity_fn(num_samples,
-                                                contingency_table,
-                                                num_samples_per_value,
-                                                curr_split.left_values,
-                                                curr_split.right_values)
+        if curr_split.is_better_than(best_split):
+            best_split = curr_split
+    return best_split
+
+
+def twoing_k_class_partition(tree_node, attrib_index, node_impurity_fn):
+    """Gets the attribute's best split according to the Twoing criterion."""
+    num_values, num_classes = tree_node.contingency_tables[attrib_index].contingency_table.shape
+    all_classes = set(range(num_classes))
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[
+        attrib_index].contingency_table
+    num_samples_per_value = tree_node.contingency_tables[
+        attrib_index].num_samples_per_value
+    best_split = split.Split()
+    for left_classes in split.powerset_using_symmetry(all_classes):
+        superclasses_contingency_table = get_contingency_table_for_superclasses(
+            num_values, contingency_table, num_samples_per_value, left_classes)
+        curr_split = get_best_split_2(num_samples,
+                                      superclasses_contingency_table,
+                                      contingency_table,
+                                      num_samples_per_value,
+                                      node_impurity_fn)
         if curr_split.is_better_than(best_split):
             best_split = curr_split
     return best_split
@@ -459,6 +477,8 @@ def flip_flop_2(partition_init_fn, tree_node, attrib_index, node_impurity_fn):
 
 
 def create_nonempty_random_partition(num_values):
+    """Creates a random partition with at least one value in each side."""
+    assert num_values >= 2
     while True:
         left_values = set()
         right_values = set()
@@ -484,7 +504,7 @@ def create_classes_random_partition(num_classes):
     return create_nonempty_random_partition(num_classes)
 
 
-def init_with_largest_alone(tree_node, attrib_index, node_impurity_fn):
+def init_with_largest_alone_superclass_partition(tree_node, attrib_index, node_impurity_fn):
     """Generates a split grouping classes in superclasses, largest one alone.
     """
     def get_index_of_largest(num_samples_per_index):
@@ -509,7 +529,32 @@ def init_with_largest_alone(tree_node, attrib_index, node_impurity_fn):
     return curr_split.left_values, curr_split.right_values
 
 
-def init_with_list_scheduling(tree_node, attrib_index, node_impurity_fn):
+def init_with_largest_alone_k_class_partition(tree_node, attrib_index, node_impurity_fn):
+    """Generates a split grouping classes in superclasses, largest one alone.
+    """
+    def get_index_of_largest(num_samples_per_index):
+        """Returns the index with the largest count."""
+        index_of_max, _ = max(enumerate(num_samples_per_index),
+                              key=operator.itemgetter(1))
+        return index_of_max
+
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[
+        attrib_index].contingency_table
+    num_samples_per_class = split.get_num_samples_per_class(contingency_table)
+    left_class = get_index_of_largest(num_samples_per_class)
+    num_values = tree_node.contingency_tables[attrib_index].contingency_table.shape[0]
+    num_samples_per_value = tree_node.contingency_tables[
+        attrib_index].num_samples_per_value
+    superclasses_contingency_table = get_contingency_table_for_superclasses(
+        num_values, contingency_table, num_samples_per_value, set([left_class]))
+    curr_split = get_best_split_2(
+        num_samples, superclasses_contingency_table, contingency_table, num_samples_per_value,
+        node_impurity_fn)
+    return curr_split.left_values, curr_split.right_values
+
+
+def init_with_list_scheduling_superclass_partition(tree_node, attrib_index, node_impurity_fn):
     """Generates a split grouping classes in superclasses using list scheduling.
     """
     def list_scheduling(num_samples_per_index):
@@ -544,6 +589,46 @@ def init_with_list_scheduling(tree_node, attrib_index, node_impurity_fn):
                                 superclasses_contingency_table,
                                 num_samples_per_value,
                                 node_impurity_fn)
+    return curr_split.left_values, curr_split.right_values
+
+
+
+def init_with_list_scheduling_k_class_partition(tree_node, attrib_index, node_impurity_fn):
+    """Generates a split grouping classes in superclasses using list scheduling.
+    """
+    def list_scheduling(num_samples_per_index):
+        """Groups indices in 2 groups, balanced using list scheduling."""
+        rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index)
+        rev_sorted_indices_and_count.reverse()
+        left_indices = set()
+        left_count = 0
+        right_indices = set()
+        right_count = 0
+        for index, index_num_samples in rev_sorted_indices_and_count:
+            if left_count > right_count:
+                right_indices.add(index)
+                right_count += index_num_samples
+            else:
+                left_indices.add(index)
+                left_count += index_num_samples
+        if len(left_indices) > len(right_indices):
+            left_indices, right_indices = right_indices, left_indices
+        return left_indices, right_indices
+
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[
+        attrib_index].contingency_table
+    num_samples_per_class = split.get_num_samples_per_class(contingency_table)
+    left_classes, _ = list_scheduling(num_samples_per_class)
+    num_values = contingency_table.shape[0]
+    num_samples_per_value = tree_node.contingency_tables[attrib_index].num_samples_per_value
+    superclasses_contingency_table = get_contingency_table_for_superclasses(
+        num_values, contingency_table, num_samples_per_value, left_classes)
+    curr_split = get_best_split_2(num_samples,
+                                  superclasses_contingency_table,
+                                  contingency_table,
+                                  num_samples_per_value,
+                                  node_impurity_fn)
     return curr_split.left_values, curr_split.right_values
 
 
@@ -602,7 +687,8 @@ def get_best_split_2(num_samples, superclass_contingency_table, contingency_tabl
     return best_split
 
 
-def random_class_partition(tree_node, attrib_index, node_impurity_fn):
+def random_class_partition_superclass_partition(tree_node, attrib_index, node_impurity_fn):
+    """Generates random superclass partition and chooses best split based on it."""
     num_samples = tree_node.dataset.num_samples
     contingency_table = tree_node.contingency_tables[
         attrib_index].contingency_table
@@ -616,6 +702,21 @@ def random_class_partition(tree_node, attrib_index, node_impurity_fn):
                           node_impurity_fn)
 
 
+def random_class_partition_k_class_partition(tree_node, attrib_index, node_impurity_fn):
+    """Generates random superclass partition. Gets valid splits based on it."""
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[
+        attrib_index].contingency_table
+    num_values, num_classes = contingency_table.shape
+    num_samples_per_value = tree_node.contingency_tables[
+        attrib_index].num_samples_per_value
+    left_classes, _ = create_classes_random_partition(num_classes)
+    superclasses_contingency_table = get_contingency_table_for_superclasses(
+        num_values, contingency_table, num_samples_per_value, left_classes)
+    return get_best_split_2(num_samples, superclasses_contingency_table, contingency_table,
+                            num_samples_per_value, node_impurity_fn)
+
+
 RANDOM_FLIPFLOP_GINI = Criterion(
     "Random-FlipFlop-Gini",
     functools.partial(flip_flop,
@@ -623,18 +724,58 @@ RANDOM_FLIPFLOP_GINI = Criterion(
                       node_impurity_fn=calculate_node_gini_index))
 
 
-LARGEST_ALONE_FLIPFLOP_GINI = Criterion(
-    "LargestAlone-FlipFlop-Gini",
+LARGEST_ALONE_SUPERCLASS_FLIPFLOP_GINI = Criterion(
+    "LargestAloneSuperclass-FlipFlop-Gini",
     functools.partial(flip_flop,
-                      partition_init_fn=init_with_largest_alone,
+                      partition_init_fn=init_with_largest_alone_superclass_partition,
                       node_impurity_fn=calculate_node_gini_index))
 
 
-LIST_SCHEDULING_FLIPFLOP_GINI = Criterion(
-    "ListScheduling-FlipFlop-Gini",
+LARGEST_ALONE_K_CLASS_FLIPFLOP_GINI = Criterion(
+    "LargestAloneKClass-FlipFlop-Gini",
     functools.partial(flip_flop,
-                      partition_init_fn=init_with_list_scheduling,
+                      partition_init_fn=init_with_largest_alone_k_class_partition,
                       node_impurity_fn=calculate_node_gini_index))
+
+
+LIST_SCHEDULING_SUPERCLASS_FLIPFLOP_GINI = Criterion(
+    "ListSchedulingSuperclass-FlipFlop-Gini",
+    functools.partial(flip_flop,
+                      partition_init_fn=init_with_list_scheduling_superclass_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+LIST_SCHEDULING_K_CLASS_FLIPFLOP_GINI = Criterion(
+    "ListSchedulingKClass-FlipFlop-Gini",
+    functools.partial(flip_flop,
+                      partition_init_fn=init_with_list_scheduling_k_class_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+RANDOM_CLASS_PARTITION_SUPERCLASS_GINI = Criterion(
+    "RandomClassPartitionSuperclass-Gini",
+    functools.partial(random_class_partition_superclass_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+RANDOM_CLASS_PARTITION_K_CLASS_GINI = Criterion(
+    "RandomClassPartitionKClass-Gini",
+    functools.partial(random_class_partition_k_class_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+TWOING_SUPERCLASS_GINI = Criterion(
+    "TwoingSuperclass-Gini",
+    functools.partial(twoing_superclass_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+TWOING_K_CLASS_GINI = Criterion(
+    "TwoingKClass-Gini",
+    functools.partial(twoing_k_class_partition,
+                      node_impurity_fn=calculate_node_gini_index))
+
+
+GINI_GAIN = Criterion("GiniGain", gini_gain)
 
 
 RANDOM_FLIPFLOP_ENTROPY = Criterion(
@@ -644,89 +785,54 @@ RANDOM_FLIPFLOP_ENTROPY = Criterion(
                       node_impurity_fn=calculate_information))
 
 
-LIST_SCHEDULING_FLIPFLOP_ENTROPY = Criterion(
-    "ListScheduling-FlipFlop-Entropy",
+LIST_SCHEDULING_SUPERCLASS_FLIPFLOP_ENTROPY = Criterion(
+    "ListSchedulingSuperclass-FlipFlop-Entropy",
     functools.partial(flip_flop,
-                      partition_init_fn=init_with_list_scheduling,
+                      partition_init_fn=init_with_list_scheduling_superclass_partition,
                       node_impurity_fn=calculate_information))
 
 
-LARGEST_ALONE_FLIPFLOP_ENTROPY = Criterion(
-    "LargestAlone-FlipFlop-Entropy",
+LIST_SCHEDULING_K_CLASS_FLIPFLOP_ENTROPY = Criterion(
+    "ListSchedulingKClass-FlipFlop-Entropy",
     functools.partial(flip_flop,
-                      partition_init_fn=init_with_largest_alone,
+                      partition_init_fn=init_with_list_scheduling_k_class_partition,
                       node_impurity_fn=calculate_information))
 
 
-RANDOM_FLIPFLOP2_GINI = Criterion(
-    "Random-FlipFlop2-Gini",
-    functools.partial(flip_flop_2,
-                      partition_init_fn=create_values_random_partition,
-                      node_impurity_fn=calculate_node_gini_index))
-
-
-LARGEST_ALONE_FLIPFLOP2_GINI = Criterion(
-    "LargestAlone-FlipFlop2-Gini",
-    functools.partial(flip_flop_2,
-                      partition_init_fn=init_with_largest_alone,
-                      node_impurity_fn=calculate_node_gini_index))
-
-
-LIST_SCHEDULING_FLIPFLOP2_GINI = Criterion(
-    "ListScheduling-FlipFlop2-Gini",
-    functools.partial(flip_flop_2,
-                      partition_init_fn=init_with_list_scheduling,
-                      node_impurity_fn=calculate_node_gini_index))
-
-
-RANDOM_CLASS_PARTITION_GINI = Criterion(
-    "RandomClassPartition-Gini",
-    functools.partial(random_class_partition,
-                      node_impurity_fn=calculate_node_gini_index))
-
-
-TWOING_GINI = Criterion(
-    "Twoing-Gini",
-    functools.partial(twoing,
-                      node_impurity_fn=calculate_node_gini_index,
-                      split_impurity_fn=calculate_split_gini_index))
-
-
-GINI_GAIN = Criterion("GiniGain", gini_gain)
-
-
-RANDOM_FLIPFLOP2_ENTROPY = Criterion(
-    "Random-FlipFlop2-Entropy",
-    functools.partial(flip_flop_2,
-                      partition_init_fn=create_values_random_partition,
+LARGEST_ALONE_SUPERCLASS_FLIPFLOP_ENTROPY = Criterion(
+    "LargestAloneSuperclass-FlipFlop-Entropy",
+    functools.partial(flip_flop,
+                      partition_init_fn=init_with_largest_alone_superclass_partition,
                       node_impurity_fn=calculate_information))
 
 
-LIST_SCHEDULING_FLIPFLOP2_ENTROPY = Criterion(
-    "ListScheduling-FlipFlop2-Entropy",
-    functools.partial(flip_flop_2,
-                      partition_init_fn=init_with_list_scheduling,
+LARGEST_ALONE_K_CLASS_FLIPFLOP_ENTROPY = Criterion(
+    "LargestAloneKClass-FlipFlop-Entropy",
+    functools.partial(flip_flop,
+                      partition_init_fn=init_with_largest_alone_k_class_partition,
+                      node_impurity_fn=calculate_information))
+
+RANDOM_CLASS_PARTITION_SUPERCLASS_ENTROPY = Criterion(
+    "RandomClassPartitionSuperclass-Entropy",
+    functools.partial(random_class_partition_superclass_partition,
                       node_impurity_fn=calculate_information))
 
 
-LARGEST_ALONE_FLIPFLOP2_ENTROPY = Criterion(
-    "LargestAlone-FlipFlop2-Entropy",
-    functools.partial(flip_flop_2,
-                      partition_init_fn=init_with_largest_alone,
+RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY = Criterion(
+    "RandomClassPartitionKClass-Entropy",
+    functools.partial(random_class_partition_k_class_partition,
                       node_impurity_fn=calculate_information))
 
 
-RANDOM_CLASS_PARTITION_ENTROPY = Criterion(
-    "RandomClassPartition-Entropy",
-    functools.partial(random_class_partition,
+TWOING_SUPERCLASS_ENTROPY = Criterion(
+    "TwoingSuperclass-Entropy",
+    functools.partial(twoing_superclass_partition,
                       node_impurity_fn=calculate_information))
 
-
-TWOING_ENTROPY = Criterion(
-    "Twoing-Entropy",
-    functools.partial(twoing,
-                      node_impurity_fn=calculate_information,
-                      split_impurity_fn=calculate_information_gain))
+TWOING_K_CLASS_ENTROPY = Criterion(
+    "TwoingKClass-Entropy",
+    functools.partial(twoing_k_class_partition,
+                      node_impurity_fn=calculate_information))
 
 
 INFORMATION_GAIN = Criterion("InformationGain", information_gain)
