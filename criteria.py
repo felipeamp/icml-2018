@@ -38,19 +38,31 @@ class Criterion(object):
 
 
 def get_indices_count_sorted(num_samples_per_index):
-    """Returns list of indices and their count, ordered by count, in num_samples_per_value.
-    """
+    """Returns list of indices and their count, ordered by count, in num_samples_per_value."""
     num_samples_per_index_enumerated = list(
         enumerate(num_samples_per_index))
     num_samples_per_index_enumerated.sort(key=lambda x: x[1])
     return num_samples_per_index_enumerated
 
 
-def get_indices_sorted_per_count(num_samples_per_index):
-    """Returns list of indices ordered by their count in num_samples_per_value.
+def get_indices_frequency_sorted(superclass_contingency_table, num_samples_per_value):
+    """Returns indices and their frequency, ordered by frequency, in superclass_contingency_table.
     """
-    indices_count_sorted = get_indices_count_sorted(num_samples_per_index)
-    return [index for (index, _) in indices_count_sorted]
+    num_values = num_samples_per_value.shape[0]
+    if 0 in num_samples_per_value:
+        print("num_samples_per_value has non-existent value")
+    frequency_per_value_enumerated = list(enumerate(
+        superclass_contingency_table[value, 0] / num_samples_per_value[value]
+        for value in range(num_values)))
+    frequency_per_value_enumerated.sort(key=lambda x: x[1])
+    return frequency_per_value_enumerated
+
+
+def get_indices_sorted_per_frequency(superclass_contingency_table, num_samples_per_value):
+    """Returns list of values indices ordered by their frequency in class 0."""
+    indices_freq_sorted = get_indices_frequency_sorted(superclass_contingency_table,
+                                                       num_samples_per_value)
+    return [index for (index, _) in indices_freq_sorted]
 
 
 def calculate_split_gini_index(num_samples, contingency_table,
@@ -99,7 +111,8 @@ def get_best_split(num_samples, contingency_table, num_samples_per_value,
 
     assert contingency_table.shape[1] == 2
     num_values, num_classes = contingency_table.shape
-    values_sorted_per_count = get_indices_sorted_per_count(contingency_table[:, 0])
+    values_sorted_per_freq = get_indices_sorted_per_frequency(contingency_table,
+                                                              num_samples_per_value)
     # We start with the (invalid) split where every value is on the right side.
     curr_split = split.Split(left_values=set(),
                              right_values=set(range(num_values)))
@@ -110,7 +123,7 @@ def get_best_split(num_samples, contingency_table, num_samples_per_value,
     num_right_samples = num_samples
     num_samples_per_class_left = [0] * num_classes
     num_samples_per_class_right = split.get_num_samples_per_class(contingency_table)
-    for last_left_value in values_sorted_per_count[:-1]:
+    for last_left_value in values_sorted_per_freq[:-1]:
         left_values = curr_split.left_values | set([last_left_value])
         right_values = curr_split.right_values - set([last_left_value])
         # Update the variables needed for the impurity calculation using a
@@ -221,6 +234,8 @@ def twoing_k_class_partition(tree_node, attrib_index, node_impurity_fn):
     for left_classes in split.powerset_using_symmetry(all_classes):
         superclasses_contingency_table = get_contingency_table_for_superclasses(
             num_values, contingency_table, num_samples_per_value, left_classes)
+        # DEBUG
+        print("left_classes:", left_classes)
         curr_split = get_best_split_2(num_samples,
                                       superclasses_contingency_table,
                                       contingency_table,
@@ -228,6 +243,14 @@ def twoing_k_class_partition(tree_node, attrib_index, node_impurity_fn):
                                       node_impurity_fn)
         if curr_split.is_better_than(best_split):
             best_split = curr_split
+    # DEBUG
+    print("twoing_k_class_partition")
+    print("contingency_table")
+    print(contingency_table)
+    print("num_samples_per_value:", num_samples_per_value)
+    print("best_split.left_values:", best_split.left_values)
+    print("best_split.right_values:", best_split.right_values)
+    print("best_split.impurity:", best_split.impurity)
     return best_split
 
 
@@ -649,7 +672,10 @@ def get_best_split_2(num_samples, superclass_contingency_table, contingency_tabl
 
     assert superclass_contingency_table.shape[1] == 2
     num_values, num_classes = contingency_table.shape
-    values_sorted_per_count = get_indices_sorted_per_count(superclass_contingency_table[:, 0])
+    values_sorted_per_freq = get_indices_sorted_per_frequency(contingency_table,
+                                                              num_samples_per_value)
+    # DEBUG:
+    print("values_sorted_per_freq:", values_sorted_per_freq)
     # We start with the (invalid) split where every value is on the right side.
     curr_split = split.Split(left_values=set(),
                              right_values=set(range(num_values)))
@@ -660,7 +686,7 @@ def get_best_split_2(num_samples, superclass_contingency_table, contingency_tabl
     num_right_samples = num_samples
     num_samples_per_class_left = [0] * num_classes
     num_samples_per_class_right = split.get_num_samples_per_class(contingency_table)
-    for last_left_value in values_sorted_per_count[:-1]:
+    for last_left_value in values_sorted_per_freq[:-1]:
         left_values = curr_split.left_values | set([last_left_value])
         right_values = curr_split.right_values - set([last_left_value])
         # Update the variables needed for the impurity calculation using a
@@ -682,6 +708,10 @@ def get_best_split_2(num_samples, superclass_contingency_table, contingency_tabl
             left_values=left_values,
             right_values=right_values,
             impurity=split_impurity)
+        # DEBUG:
+        print("\tleft_values:", left_values)
+        print("\tright_values:", right_values)
+        print("\tsplit_impurity:", split_impurity)
         if curr_split.is_better_than(best_split):
             best_split = curr_split
     return best_split
@@ -713,8 +743,22 @@ def random_class_partition_k_class_partition(tree_node, attrib_index, node_impur
     left_classes, _ = create_classes_random_partition(num_classes)
     superclasses_contingency_table = get_contingency_table_for_superclasses(
         num_values, contingency_table, num_samples_per_value, left_classes)
-    return get_best_split_2(num_samples, superclasses_contingency_table, contingency_table,
+    # DEBUG
+    print("random_class_partition_k_class_partition")
+    print("contingency_table")
+    print(contingency_table)
+    print("num_samples_per_value:", num_samples_per_value)
+    print("left_classes:", left_classes)
+    print("superclasses_contingency_table")
+    print(superclasses_contingency_table)
+    best_split = get_best_split_2(num_samples, superclasses_contingency_table, contingency_table,
                             num_samples_per_value, node_impurity_fn)
+    # DEBUG
+    print("num_samples_per_value:", num_samples_per_value)
+    print("best_split.left_values:", best_split.left_values)
+    print("best_split.right_values:", best_split.right_values)
+    print("best_split.impurity:", best_split.impurity)
+    return best_split
 
 
 RANDOM_FLIPFLOP_GINI = Criterion(

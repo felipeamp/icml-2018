@@ -100,6 +100,7 @@ def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
                              criterion.name == criteria.GINI_GAIN.name or
                              (num_classes > 9 and criterion.name.find("Twoing") != -1))):
                         continue
+                    print("criterion_name:", criterion.name)
                     run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver)
     finally:
         result_saver.write_csv()
