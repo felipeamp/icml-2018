@@ -37,11 +37,11 @@ class Criterion(object):
         return best_splits
 
 
-def get_indices_count_sorted(num_samples_per_index):
+def get_indices_count_sorted(num_samples_per_index, reverse=False):
     """Returns list of indices and their count, ordered by count, in num_samples_per_value."""
     num_samples_per_index_enumerated = list(
         enumerate(num_samples_per_index))
-    num_samples_per_index_enumerated.sort(key=lambda x: x[1])
+    num_samples_per_index_enumerated.sort(key=lambda x: x[1], reverse=reverse)
     return num_samples_per_index_enumerated
 
 
@@ -585,8 +585,7 @@ def init_with_list_scheduling_superclass_partition(tree_node, attrib_index, node
     """
     def list_scheduling(num_samples_per_index):
         """Groups indices in 2 groups, balanced using list scheduling."""
-        rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index)
-        rev_sorted_indices_and_count.reverse()
+        rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index, reverse=True)
         left_indices = set()
         left_count = 0
         right_indices = set()
@@ -625,7 +624,7 @@ def init_with_list_scheduling_k_class_partition(tree_node, attrib_index, node_im
     """
     def list_scheduling(num_samples_per_index):
         """Groups indices in 2 groups, balanced using list scheduling."""
-        rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index)
+        rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index, reverse=True)
         rev_sorted_indices_and_count.reverse()
         left_indices = set()
         left_count = 0
