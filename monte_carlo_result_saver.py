@@ -48,34 +48,35 @@ class MonteCarloResultSaver(object):
         """Stores given result. Will be saved in csv later, when write_csv is called."""
         self.results[(num_values, num_classes)][criterion_name].append(
             (best_impurity_found, num_iterations_when_converged))
-        curr_is_twoing = False
-        other_name = None
-        if criterion_name == criteria.RANDOM_CLASS_PARTITION_K_CLASS_GINI.name:
-            other_name = criteria.TWOING_K_CLASS_GINI.name
-        elif criterion_name == criteria.TWOING_K_CLASS_GINI.name:
-            other_name = criteria.RANDOM_CLASS_PARTITION_K_CLASS_GINI.name
-            curr_is_twoing = True
-        elif criterion_name == criteria.RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY.name:
-            other_name = criteria.TWOING_K_CLASS_ENTROPY.name
-        elif criterion_name == criteria.TWOING_K_CLASS_ENTROPY.name:
-            other_name = criteria.RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY.name
-            curr_is_twoing = True
-        if (other_name in self.results[(num_values, num_classes)] and
-            (len(self.results[(num_values, num_classes)][other_name]) ==
-             len(self.results[(num_values, num_classes)][criterion_name]))):
-            other_impurity = self.results[(num_values, num_classes)][other_name][-1][0]
-            if curr_is_twoing and other_impurity < best_impurity_found:
-                print("FOUND PROBLEM!")
-                print("experiment number:",
-                      len(self.results[(num_values, num_classes)][criterion_name]) - 1)
-                print("twoing impurity:", best_impurity_found)
-                print("random_class_partition impurity:", other_impurity)
-            elif not curr_is_twoing and other_impurity > best_impurity_found:
-                print("FOUND PROBLEM!")
-                print("experiment number:",
-                      len(self.results[(num_values, num_classes)][criterion_name]) - 1)
-                print("twoing impurity:", other_impurity)
-                print("random_class_partition impurity:", best_impurity_found)
+        # DEBUG
+        # curr_is_twoing = False
+        # other_name = None
+        # if criterion_name == criteria.RANDOM_CLASS_PARTITION_K_CLASS_GINI.name:
+        #     other_name = criteria.TWOING_K_CLASS_GINI.name
+        # elif criterion_name == criteria.TWOING_K_CLASS_GINI.name:
+        #     other_name = criteria.RANDOM_CLASS_PARTITION_K_CLASS_GINI.name
+        #     curr_is_twoing = True
+        # elif criterion_name == criteria.RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY.name:
+        #     other_name = criteria.TWOING_K_CLASS_ENTROPY.name
+        # elif criterion_name == criteria.TWOING_K_CLASS_ENTROPY.name:
+        #     other_name = criteria.RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY.name
+        #     curr_is_twoing = True
+        # if (other_name in self.results[(num_values, num_classes)] and
+        #     (len(self.results[(num_values, num_classes)][other_name]) ==
+        #      len(self.results[(num_values, num_classes)][criterion_name]))):
+        #     other_impurity = self.results[(num_values, num_classes)][other_name][-1][0]
+        #     if curr_is_twoing and other_impurity < best_impurity_found:
+        #         print("FOUND PROBLEM!")
+        #         print("experiment number:",
+        #               len(self.results[(num_values, num_classes)][criterion_name]) - 1)
+        #         print("twoing impurity:", best_impurity_found)
+        #         print("random_class_partition impurity:", other_impurity)
+        #     elif not curr_is_twoing and other_impurity > best_impurity_found:
+        #         print("FOUND PROBLEM!")
+        #         print("experiment number:",
+        #               len(self.results[(num_values, num_classes)][criterion_name]) - 1)
+        #         print("twoing impurity:", other_impurity)
+        #         print("random_class_partition impurity:", best_impurity_found)
 
     def _get_criteria_correct_order(self, pairs_num_values_classes):
         unordered_criteria = []
@@ -139,5 +140,11 @@ class MonteCarloResultSaver(object):
         num_experiments = max(
             len(self.results[pairs_num_values_classes[0]][criterion])
             for criterion in all_criteria)
-        self._save_csv_experiments(pairs_num_values_classes, num_experiments, all_criteria)
-        self._save_csv_table(pairs_num_values_classes, num_experiments, all_criteria)
+        try:
+            self._save_csv_experiments(pairs_num_values_classes, num_experiments, all_criteria)
+        except:
+            pass
+        try:
+            self._save_csv_table(pairs_num_values_classes, num_experiments, all_criteria)
+        except:
+            pass
