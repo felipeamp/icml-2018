@@ -574,9 +574,20 @@ def init_with_largest_alone_k_class_partition(tree_node, attrib_index, node_impu
         attrib_index].num_samples_per_value
     superclasses_contingency_table = get_contingency_table_for_superclasses(
         num_values, contingency_table, num_samples_per_value, set([left_class]))
+    # DEBUG
+    # print("init_with_largest_alone_k_class_partition")
+    # print("contingency_table")
+    # print(contingency_table)
+    # print("num_samples_per_value:", num_samples_per_value)
+    # print("left_class:", left_class)
+    # print("superclasses_contingency_table")
     curr_split = get_best_split_2(
         num_samples, superclasses_contingency_table, contingency_table, num_samples_per_value,
         node_impurity_fn)
+    # DEBUG
+    # print("curr_split.left_values:", curr_split.left_values)
+    # print("curr_split.right_values:", curr_split.right_values)
+    # print("curr_split.impurity:", curr_split.impurity)
     return curr_split.left_values, curr_split.right_values
 
 
@@ -586,12 +597,12 @@ def init_with_list_scheduling_superclass_partition(tree_node, attrib_index, node
     def list_scheduling(num_samples_per_index):
         """Groups indices in 2 groups, balanced using list scheduling."""
         rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index, reverse=True)
-        left_indices = set()
-        left_count = 0
+        left_indices = set([rev_sorted_indices_and_count[0][0]])
+        left_count = rev_sorted_indices_and_count[0][1]
         right_indices = set()
         right_count = 0
-        for index, index_num_samples in rev_sorted_indices_and_count:
-            if left_count > right_count:
+        for index, index_num_samples in rev_sorted_indices_and_count[1:]:
+            if left_count >= right_count:
                 right_indices.add(index)
                 right_count += index_num_samples
             else:
@@ -625,19 +636,21 @@ def init_with_list_scheduling_k_class_partition(tree_node, attrib_index, node_im
     def list_scheduling(num_samples_per_index):
         """Groups indices in 2 groups, balanced using list scheduling."""
         rev_sorted_indices_and_count = get_indices_count_sorted(num_samples_per_index, reverse=True)
-        rev_sorted_indices_and_count.reverse()
-        left_indices = set()
-        left_count = 0
+        # DEBUG
+        # print("rev_sorted_indices_and_count:", rev_sorted_indices_and_count)
+        left_indices = set([rev_sorted_indices_and_count[0][0]])
+        left_count = rev_sorted_indices_and_count[0][1]
         right_indices = set()
         right_count = 0
-        for index, index_num_samples in rev_sorted_indices_and_count:
-            if left_count > right_count:
+        for index, index_num_samples in rev_sorted_indices_and_count[1:]:
+            if left_count >= right_count:
                 right_indices.add(index)
                 right_count += index_num_samples
             else:
                 left_indices.add(index)
                 left_count += index_num_samples
-        if len(left_indices) > len(right_indices):
+        if (len(left_indices) > len(right_indices) or
+                (len(left_indices) == len(right_indices) and 0 in right_indices)):
             left_indices, right_indices = right_indices, left_indices
         return left_indices, right_indices
 
@@ -650,11 +663,22 @@ def init_with_list_scheduling_k_class_partition(tree_node, attrib_index, node_im
     num_samples_per_value = tree_node.contingency_tables[attrib_index].num_samples_per_value
     superclasses_contingency_table = get_contingency_table_for_superclasses(
         num_values, contingency_table, num_samples_per_value, left_classes)
+    # DEBUG
+    # print("init_with_list_scheduling_k_class_partition")
+    # print("contingency_table")
+    # print(contingency_table)
+    # print("num_samples_per_value:", num_samples_per_value)
+    # print("left_classes:", left_classes)
+    # print("superclasses_contingency_table")
     curr_split = get_best_split_2(num_samples,
                                   superclasses_contingency_table,
                                   contingency_table,
                                   num_samples_per_value,
                                   node_impurity_fn)
+    # DEBUG
+    # print("curr_split.left_values:", curr_split.left_values)
+    # print("curr_split.right_values:", curr_split.right_values)
+    # print("curr_split.impurity:", curr_split.impurity)
     return curr_split.left_values, curr_split.right_values
 
 
