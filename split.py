@@ -25,10 +25,16 @@ class Split(object):
             self.right_values = right_values
         self.impurity = impurity
         self.iteration_number = None
+        self.superclasses_largest_frequence = None
 
     def set_iteration_number(self, iteration_number):
         """Saves iteration number of the given split."""
         self.iteration_number = iteration_number
+
+
+    def set_superclasses_largest_frequence(self, largest_frequence):
+        """Saves frequence of most frequent superclass."""
+        self.superclasses_largest_frequence = largest_frequence
 
     def is_valid(self):
         """Indicates whether the Split is valid."""

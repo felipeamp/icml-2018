@@ -12,7 +12,7 @@ import criteria
 def write_csv_experiments_header(fout):
     """Writes csv_experiments header."""
     line_list = ["num_values", "num_classes", "experiment number", "method", "best impurity found",
-                 "# iterations until convergence"]
+                 "# iterations until convergence", "superclasses_largest_frequence"]
     print(','.join(line_list), file=fout)
 
 
@@ -44,10 +44,10 @@ class MonteCarloResultSaver(object):
         self.results = collections.defaultdict(criterion_results_ctor)
 
     def store_result(self, num_values, num_classes, criterion_name, best_impurity_found,
-                     num_iterations_when_converged):
+                     num_iterations_when_converged, superclasses_largest_frequence=None):
         """Stores given result. Will be saved in csv later, when write_csv is called."""
         self.results[(num_values, num_classes)][criterion_name].append(
-            (best_impurity_found, num_iterations_when_converged))
+            (best_impurity_found, num_iterations_when_converged, superclasses_largest_frequence))
         # DEBUG
         # curr_is_twoing = False
         # other_name = None
@@ -107,12 +107,15 @@ class MonteCarloResultSaver(object):
                                  criterion_name == criteria.GINI_GAIN.name or
                                  (num_classes > 9 and criterion_name.find("Twoing") != -1))):
                             continue
-                        (best_impurity_found, num_iterations_when_converged) = self.results[
-                            (num_values, num_classes)][criterion_name][experiment_num]
+                        (best_impurity_found,
+                         num_iterations_when_converged,
+                         superclasses_largest_frequence) = self.results[
+                             (num_values, num_classes)][criterion_name][experiment_num]
                         line_list = map(str,
                                         [num_values, num_classes, experiment_num + 1,
                                          criterion_name, best_impurity_found,
-                                         num_iterations_when_converged])
+                                         num_iterations_when_converged,
+                                         superclasses_largest_frequence])
                         print(','.join(line_list), file=fout)
 
     def _save_csv_table(self, pair_num_values_classes, num_experiments, all_criteria):

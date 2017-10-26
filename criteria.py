@@ -37,6 +37,12 @@ class Criterion(object):
         return best_splits
 
 
+def save_superclasses_largest_frequence(num_samples, superclass_contingency_table, best_split):
+    """Saves the superclasses_largest_frequence field in best_split."""
+    num_samples_per_class = split.get_num_samples_per_class(superclass_contingency_table)
+    best_split.set_superclasses_largest_frequence(max(num_samples_per_class) / num_samples)
+
+
 def get_indices_count_sorted(num_samples_per_index, reverse=False):
     """Returns list of indices and their count, ordered by count, in num_samples_per_value."""
     num_samples_per_index_enumerated = list(
@@ -219,6 +225,8 @@ def twoing_superclass_partition(tree_node, attrib_index, node_impurity_fn):
                                     node_impurity_fn)
         if curr_split.is_better_than(best_split):
             best_split = curr_split
+            save_superclasses_largest_frequence(
+                num_samples, superclasses_contingency_table, best_split)
     return best_split
 
 
@@ -244,6 +252,8 @@ def twoing_k_class_partition(tree_node, attrib_index, node_impurity_fn):
                                       node_impurity_fn)
         if curr_split.is_better_than(best_split):
             best_split = curr_split
+            save_superclasses_largest_frequence(
+                num_samples, superclasses_contingency_table, best_split)
     # DEBUG
     # print("twoing_k_class_partition")
     # print("contingency_table")
@@ -433,9 +443,7 @@ def flip_flop(partition_init_fn, tree_node, attrib_index, node_impurity_fn):
     num_samples_per_value = tree_node.contingency_tables[
         attrib_index].num_samples_per_value
     num_samples_per_class = split.get_num_samples_per_class(contingency_table)
-    left_values, right_values = partition_init_fn(tree_node, attrib_index, node_impurity_fn)
-    best_split = split.Split(left_values=left_values,
-                             right_values=right_values)
+    best_split = partition_init_fn(tree_node, attrib_index, node_impurity_fn)
     for iteration_number in range(1, MAX_ITERATIONS + 1):
         # Use values split as 2 supervalues and create binary split of classes.
         smaller_values_set = split.get_smaller_set(best_split.left_values,
@@ -471,9 +479,7 @@ def flip_flop_2(partition_init_fn, tree_node, attrib_index, node_impurity_fn):
     num_samples_per_value = tree_node.contingency_tables[
         attrib_index].num_samples_per_value
     num_samples_per_class = split.get_num_samples_per_class(contingency_table)
-    left_values, right_values = partition_init_fn(tree_node, attrib_index, node_impurity_fn)
-    best_split = split.Split(left_values=left_values,
-                             right_values=right_values)
+    best_split = partition_init_fn(tree_node, attrib_index, node_impurity_fn)
     for iteration_number in range(1, MAX_ITERATIONS + 1):
         # Use values split as 2 supervalues and create binary split of classes.
         smaller_values_set = split.get_smaller_set(best_split.left_values,
@@ -523,7 +529,10 @@ def create_nonempty_random_partition(num_values):
 def create_values_random_partition(tree_node, attrib_index, _):
     """Creates a random partition of the integer values in [0, num_values)."""
     num_values = tree_node.contingency_tables[attrib_index].contingency_table.shape[0]
-    return create_nonempty_random_partition(num_values)
+    left_values, right_values = create_nonempty_random_partition(num_values)
+    best_split = split.Split(left_values=left_values,
+                             right_values=right_values)
+    return best_split
 
 
 def create_classes_random_partition(num_classes):
@@ -553,7 +562,9 @@ def init_with_largest_alone_superclass_partition(tree_node, attrib_index, node_i
     curr_split = get_best_split(
         num_samples, superclasses_contingency_table, num_samples_per_value,
         node_impurity_fn)
-    return curr_split.left_values, curr_split.right_values
+    save_superclasses_largest_frequence(
+        num_samples, superclasses_contingency_table, curr_split)
+    return curr_split
 
 
 def init_with_largest_alone_k_class_partition(tree_node, attrib_index, node_impurity_fn):
@@ -584,11 +595,13 @@ def init_with_largest_alone_k_class_partition(tree_node, attrib_index, node_impu
     curr_split = get_best_split_2(
         num_samples, superclasses_contingency_table, contingency_table, num_samples_per_value,
         node_impurity_fn)
+    save_superclasses_largest_frequence(
+        num_samples, superclasses_contingency_table, curr_split)
     # DEBUG
     # print("curr_split.left_values:", curr_split.left_values)
     # print("curr_split.right_values:", curr_split.right_values)
     # print("curr_split.impurity:", curr_split.impurity)
-    return curr_split.left_values, curr_split.right_values
+    return curr_split
 
 
 def init_with_list_scheduling_superclass_partition(tree_node, attrib_index, node_impurity_fn):
@@ -626,7 +639,9 @@ def init_with_list_scheduling_superclass_partition(tree_node, attrib_index, node
                                 superclasses_contingency_table,
                                 num_samples_per_value,
                                 node_impurity_fn)
-    return curr_split.left_values, curr_split.right_values
+    save_superclasses_largest_frequence(
+        num_samples, superclasses_contingency_table, curr_split)
+    return curr_split
 
 
 
@@ -675,11 +690,13 @@ def init_with_list_scheduling_k_class_partition(tree_node, attrib_index, node_im
                                   contingency_table,
                                   num_samples_per_value,
                                   node_impurity_fn)
+    save_superclasses_largest_frequence(
+        num_samples, superclasses_contingency_table, curr_split)
     # DEBUG
     # print("curr_split.left_values:", curr_split.left_values)
     # print("curr_split.right_values:", curr_split.right_values)
     # print("curr_split.impurity:", curr_split.impurity)
-    return curr_split.left_values, curr_split.right_values
+    return curr_split
 
 
 def get_best_split_2(num_samples, superclass_contingency_table, contingency_table,
@@ -755,8 +772,11 @@ def random_class_partition_superclass_partition(tree_node, attrib_index, node_im
     left_classes, _ = create_classes_random_partition(num_classes)
     superclasses_contingency_table = get_contingency_table_for_superclasses(
         num_values, contingency_table, num_samples_per_value, left_classes)
-    return get_best_split(num_samples, superclasses_contingency_table, num_samples_per_value,
-                          node_impurity_fn)
+    best_split = get_best_split(
+        num_samples, superclasses_contingency_table, num_samples_per_value, node_impurity_fn)
+    save_superclasses_largest_frequence(
+        num_samples, superclasses_contingency_table, best_split)
+    return best_split
 
 
 def random_class_partition_k_class_partition(tree_node, attrib_index, node_impurity_fn):
@@ -779,7 +799,9 @@ def random_class_partition_k_class_partition(tree_node, attrib_index, node_impur
     # print("superclasses_contingency_table")
     # print(superclasses_contingency_table)
     best_split = get_best_split_2(num_samples, superclasses_contingency_table, contingency_table,
-                            num_samples_per_value, node_impurity_fn)
+                                  num_samples_per_value, node_impurity_fn)
+    save_superclasses_largest_frequence(
+        num_samples, superclasses_contingency_table, best_split)
     # DEBUG
     # print("num_samples_per_value:", num_samples_per_value)
     # print("best_split.left_values:", best_split.left_values)

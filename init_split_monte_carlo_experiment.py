@@ -18,7 +18,8 @@ import tree_node
 
 NUM_MONTE_CARLO_EXPERIMENTS = 10000
 
-PAIR_NUM_VALUES_CLASSES = [(6, 3), (6, 9), (12, 3), (12, 9), (50, 3), (50, 9), (50, 30)]
+PAIR_NUM_VALUES_CLASSES = [(6, 3), (6, 9), (12, 3), (12, 9), (50, 3), (50, 9), (50, 30), (50, 50),
+                           (100, 50), (100, 100), (200, 100)]
 
 CRITERIA_AND_SPLIT_IMPURITY_FN = [
     (criteria.RANDOM_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
@@ -63,7 +64,8 @@ def run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver):
         best_split.right_values)
     num_values, num_classes = curr_tree_node.contingency_tables[0].contingency_table.shape
     result_saver.store_result(num_values, num_classes, remove_flipflop_from_name(criterion.name),
-                              best_impurity_found, best_split.iteration_number)
+                              best_impurity_found, best_split.iteration_number,
+                              best_split.superclasses_largest_frequence)
 
 
 def create_fake_tree_node(contingency_table):
