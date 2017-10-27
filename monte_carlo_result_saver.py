@@ -6,13 +6,14 @@
 import collections
 import os
 
-import criteria
+# import criteria
 
 
 def write_csv_experiments_header(fout):
     """Writes csv_experiments header."""
     line_list = ["num_values", "num_classes", "experiment number", "method", "best impurity found",
-                 "# iterations until convergence", "superclasses_largest_frequence"]
+                 "# iterations until convergence", "superclasses_largest_frequence",
+                 "largest_class_frequency"]
     print(','.join(line_list), file=fout)
 
 
@@ -24,7 +25,8 @@ def write_csv_table_header(fout, all_criteria):
 
 class MonteCarloResultSaver(object):
     """Stores impurity result for each criteria and saves in CSV."""
-    def __init__(self, csv_experiments_filename, csv_table_filename, csv_output_dir):
+    def __init__(self, csv_experiments_filename, csv_table_filename, csv_output_dir,
+                 should_skip_experiment_fn):
         if csv_output_dir and not os.path.exists(csv_output_dir):
             raise ValueError("The directory to contain the output csv (%s) must exist." %
                              csv_output_dir)
@@ -40,14 +42,14 @@ class MonteCarloResultSaver(object):
         self.csv_experiments_output_path = csv_experiments_output_path
         self.csv_table_output_path = csv_table_output_path
         criterion_results_ctor = lambda: collections.defaultdict(list)
-        # self.results[(num_values, num_classes)][criterion_name] = (impurity, num_iterations)
+        # self.results[(num_values, num_classes)][criterion_name] = experiment_info
         self.results = collections.defaultdict(criterion_results_ctor)
+        # self.should_skip_experiment_fn(num_values, num_classes, criterion_name) is bool
+        self.should_skip_experiment_fn = should_skip_experiment_fn
 
-    def store_result(self, num_values, num_classes, criterion_name, best_impurity_found,
-                     num_iterations_when_converged, superclasses_largest_frequence=None):
+    def store_result(self, num_values, num_classes, criterion_name, curr_experiment_info):
         """Stores given result. Will be saved in csv later, when write_csv is called."""
-        self.results[(num_values, num_classes)][criterion_name].append(
-            (best_impurity_found, num_iterations_when_converged, superclasses_largest_frequence))
+        self.results[(num_values, num_classes)][criterion_name].append(curr_experiment_info)
         # DEBUG
         # curr_is_twoing = False
         # other_name = None
@@ -102,20 +104,16 @@ class MonteCarloResultSaver(object):
             for experiment_num in range(num_experiments):
                 for (num_values, num_classes) in pair_num_values_classes:
                     for criterion_name in all_criteria:
-                        if (num_values > 12 and
-                                (criterion_name == criteria.INFORMATION_GAIN.name or
-                                 criterion_name == criteria.GINI_GAIN.name or
-                                 (num_classes > 9 and criterion_name.find("Twoing") != -1))):
+                        if self.should_skip_experiment_fn(num_values, num_classes, criterion_name):
                             continue
-                        (best_impurity_found,
-                         num_iterations_when_converged,
-                         superclasses_largest_frequence) = self.results[
-                             (num_values, num_classes)][criterion_name][experiment_num]
+                        curr_experiment_info = self.results[
+                            (num_values, num_classes)][criterion_name][experiment_num]
                         line_list = map(str,
                                         [num_values, num_classes, experiment_num + 1,
-                                         criterion_name, best_impurity_found,
-                                         num_iterations_when_converged,
-                                         superclasses_largest_frequence])
+                                         criterion_name, curr_experiment_info.impurity,
+                                         curr_experiment_info.num_iterations,
+                                         curr_experiment_info.superclasses_largest_frequence,
+                                         curr_experiment_info.largest_class_frequency])
                         print(','.join(line_list), file=fout)
 
     def _save_csv_table(self, pair_num_values_classes, num_experiments, all_criteria):
@@ -125,15 +123,11 @@ class MonteCarloResultSaver(object):
                 for experiment_num in range(num_experiments):
                     line_list = [num_values, num_classes, experiment_num + 1]
                     for criterion_name in all_criteria:
-                        if (num_values > 12 and
-                                (criterion_name == criteria.INFORMATION_GAIN.name or
-                                 criterion_name == criteria.GINI_GAIN.name or
-                                 (num_classes > 9 and criterion_name.find("Twoing") != -1))):
-                            line_list.append(None)
+                        if self.should_skip_experiment_fn(num_values, num_classes, criterion_name):
                             continue
-                        best_impurity_found = self.results[
-                            (num_values, num_classes)][criterion_name][experiment_num][0]
-                        line_list.append(best_impurity_found)
+                        curr_experiment_info = self.results[
+                            (num_values, num_classes)][criterion_name][experiment_num]
+                        line_list.append(curr_experiment_info.impurity)
                     print(','.join(map(str, line_list)), file=fout)
 
     def write_csv(self):
@@ -143,11 +137,17 @@ class MonteCarloResultSaver(object):
         num_experiments = max(
             len(self.results[pairs_num_values_classes[0]][criterion])
             for criterion in all_criteria)
+        # # DEBUG
+        # print("pairs_num_values_classes:", pairs_num_values_classes)
+        # print("all_criteria:", all_criteria)
+        # print("num_experiments:", num_experiments)
         try:
             self._save_csv_experiments(pairs_num_values_classes, num_experiments, all_criteria)
-        except:
-            pass
+        except Exception as err:
+            # DEBUG
+            print("EXCEPT IN EXPERIMENT WRITING:", err)
         try:
             self._save_csv_table(pairs_num_values_classes, num_experiments, all_criteria)
-        except:
-            pass
+        except Exception as err:
+            # DEBUG
+            print("EXCEPT IN TABLE WRITING:", err)
