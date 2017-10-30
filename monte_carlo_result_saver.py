@@ -124,6 +124,7 @@ class MonteCarloResultSaver(object):
                     line_list = [num_values, num_classes, experiment_num + 1]
                     for criterion_name in all_criteria:
                         if self.should_skip_experiment_fn(num_values, num_classes, criterion_name):
+                            line_list.append(None)
                             continue
                         curr_experiment_info = self.results[
                             (num_values, num_classes)][criterion_name][experiment_num]
