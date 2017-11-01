@@ -25,28 +25,68 @@ PAIR_NUM_VALUES_CLASSES = [
     (50, 50), (100, 50), (100, 100), (200, 100),
     (9, 50), (30, 50), (50, 100), (100, 200)]
 
-CRITERIA_AND_SPLIT_IMPURITY_FN = [
-    (criteria.RANDOM_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
-    (criteria.LARGEST_ALONE_SUPERCLASS_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
-    (criteria.LIST_SCHEDULING_SUPERCLASS_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
-    (criteria.RANDOM_CLASS_PARTITION_SUPERCLASS_GINI, criteria.calculate_split_gini_index),
-    (criteria.TWOING_SUPERCLASS_GINI, criteria.calculate_split_gini_index),
-    (criteria.LARGEST_ALONE_K_CLASS_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
-    (criteria.LIST_SCHEDULING_K_CLASS_FLIPFLOP_GINI, criteria.calculate_split_gini_index),
-    (criteria.RANDOM_CLASS_PARTITION_K_CLASS_GINI, criteria.calculate_split_gini_index),
-    (criteria.TWOING_K_CLASS_GINI, criteria.calculate_split_gini_index),
-    (criteria.GINI_GAIN, criteria.calculate_split_gini_index),
+CRITERIA_AND_IMPURITY_FNS = [
+    (criteria.RANDOM_FLIPFLOP_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.LARGEST_ALONE_SUPERCLASS_FLIPFLOP_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.LIST_SCHEDULING_SUPERCLASS_FLIPFLOP_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.RANDOM_CLASS_PARTITION_SUPERCLASS_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.TWOING_SUPERCLASS_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.LARGEST_ALONE_K_CLASS_FLIPFLOP_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.LIST_SCHEDULING_K_CLASS_FLIPFLOP_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.RANDOM_CLASS_PARTITION_K_CLASS_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.TWOING_K_CLASS_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
+    (criteria.GINI_GAIN,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
 
-    (criteria.RANDOM_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LIST_SCHEDULING_SUPERCLASS_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LARGEST_ALONE_SUPERCLASS_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.RANDOM_CLASS_PARTITION_SUPERCLASS_ENTROPY, criteria.calculate_information_gain),
-    (criteria.TWOING_SUPERCLASS_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LIST_SCHEDULING_K_CLASS_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.LARGEST_ALONE_K_CLASS_FLIPFLOP_ENTROPY, criteria.calculate_information_gain),
-    (criteria.RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY, criteria.calculate_information_gain),
-    (criteria.TWOING_K_CLASS_ENTROPY, criteria.calculate_information_gain),
-    (criteria.INFORMATION_GAIN, criteria.calculate_information_gain),
+    (criteria.RANDOM_FLIPFLOP_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.LIST_SCHEDULING_SUPERCLASS_FLIPFLOP_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.LARGEST_ALONE_SUPERCLASS_FLIPFLOP_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.RANDOM_CLASS_PARTITION_SUPERCLASS_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.TWOING_SUPERCLASS_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.LIST_SCHEDULING_K_CLASS_FLIPFLOP_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.LARGEST_ALONE_K_CLASS_FLIPFLOP_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.RANDOM_CLASS_PARTITION_K_CLASS_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.TWOING_K_CLASS_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.INFORMATION_GAIN,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
     ]
 
 SEED = 19880531
@@ -74,21 +114,21 @@ def remove_flipflop_from_name(criterion_name):
     return criterion_name.replace("-FlipFlop", "")
 
 
-def run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver):
+def run_experiment(curr_tree_node, criterion, split_impurity_fn, node_impurity_fn, result_saver):
     """Runs the given experiment and saves it in the result_saver."""
     best_split = criterion.find_best_split_fn(tree_node=curr_tree_node, attrib_index=0)
     num_samples = curr_tree_node.dataset.num_samples
     contingency_table = curr_tree_node.contingency_tables[0].contingency_table
     num_samples_per_value = curr_tree_node.contingency_tables[0].num_samples_per_value
-    best_impurity_found = split_impurity_fn(
-        num_samples,
-        contingency_table,
-        num_samples_per_value,
-        best_split.left_values,
-        best_split.right_values)
+    num_samples_per_class = split.get_num_samples_per_class(contingency_table)
+    best_impurity_found = (node_impurity_fn(num_samples, num_samples_per_class)
+                           - split_impurity_fn(num_samples,
+                                               contingency_table,
+                                               num_samples_per_value,
+                                               best_split.left_values,
+                                               best_split.right_values))
     num_values, num_classes = contingency_table.shape
-    largest_class_frequency = (
-        max(split.get_num_samples_per_class(contingency_table)) / num_samples)
+    largest_class_frequency = max(num_samples_per_class) / num_samples
     curr_experiment_info = experiment_info.ExperimentInfo(
         best_impurity_found, best_split.iteration_number, best_split.superclasses_largest_frequence,
         largest_class_frequency)
@@ -124,11 +164,12 @@ def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
                 print("experiment_num:", experiment_num + 1)
                 contingency_table = attrib_gen.generate(num_values, num_classes)
                 curr_tree_node = create_fake_tree_node(contingency_table)
-                for criterion, split_impurity_fn in CRITERIA_AND_SPLIT_IMPURITY_FN:
+                for criterion, split_impurity_fn, node_impurity_fn in CRITERIA_AND_IMPURITY_FNS:
                     if should_skip_experiment_given_params_index(parameters_index, criterion.name):
                         continue
                     # print("criterion_name:", criterion.name)
-                    run_experiment(curr_tree_node, criterion, split_impurity_fn, result_saver)
+                    run_experiment(curr_tree_node, criterion, split_impurity_fn, node_impurity_fn,
+                                   result_saver)
     finally:
         result_saver.write_csv()
 
