@@ -121,12 +121,11 @@ def run_experiment(curr_tree_node, criterion, split_impurity_fn, node_impurity_f
     contingency_table = curr_tree_node.contingency_tables[0].contingency_table
     num_samples_per_value = curr_tree_node.contingency_tables[0].num_samples_per_value
     num_samples_per_class = split.get_num_samples_per_class(contingency_table)
-    best_impurity_found = (node_impurity_fn(num_samples, num_samples_per_class)
-                           - split_impurity_fn(num_samples,
-                                               contingency_table,
-                                               num_samples_per_value,
-                                               best_split.left_values,
-                                               best_split.right_values))
+    best_impurity_found = split_impurity_fn(num_samples,
+                                            contingency_table,
+                                            num_samples_per_value,
+                                            best_split.left_values,
+                                            best_split.right_values)
     num_values, num_classes = contingency_table.shape
     largest_class_frequency = max(num_samples_per_class) / num_samples
     curr_experiment_info = experiment_info.ExperimentInfo(
