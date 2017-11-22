@@ -155,9 +155,9 @@ def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
     result_saver = monte_carlo_result_saver.MonteCarloResultSaver(
         csv_experiments_filename, csv_table_filename, csv_output_dir, should_skip_experiment)
     attrib_gen = attribute_generator.RandomAttributeGenerator(SEED)
-    random.seed(SEED)
     try:
         for parameters_index, (num_values, num_classes) in enumerate(PAIR_NUM_VALUES_CLASSES):
+            random.seed(SEED)
             print("num_values:", num_values)
             print("num_classes:", num_classes)
             for experiment_num in range(NUM_MONTE_CARLO_EXPERIMENTS):
