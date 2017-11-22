@@ -400,7 +400,7 @@ def sliq(tree_node, attrib_index):
     return best_split
 
 
-def sliq_ext(tree_node, attrib_index):
+def sliq_ext(tree_node, attrib_index, split_impurity_fn):
     """Gets the attribute's best split according to the SLIQ-ext criterion."""
     all_values = set(range(tree_node.contingency_tables[attrib_index].contingency_table.shape[0]))
     num_samples = tree_node.dataset.num_samples
@@ -417,14 +417,14 @@ def sliq_ext(tree_node, attrib_index):
             curr_left_values = iteration_start_split.left_values - set([value])
             curr_right_values = (
                 iteration_start_split.right_values | set([value]))
-            curr_split_gini = calculate_split_gini_index(num_samples,
-                                                         contingency_table,
-                                                         num_samples_per_value,
-                                                         curr_left_values,
-                                                         curr_right_values)
+            curr_split_impurity = split_impurity_fn(num_samples,
+                                                    contingency_table,
+                                                    num_samples_per_value,
+                                                    curr_left_values,
+                                                    curr_right_values)
             curr_split = split.Split(left_values=curr_left_values,
                                      right_values=curr_right_values,
-                                     impurity=curr_split_gini)
+                                     impurity=curr_split_impurity)
             if curr_split.is_better_than(iteration_best_split):
                 iteration_best_split = curr_split
         if iteration_best_split.is_better_than(best_split):
@@ -929,3 +929,15 @@ TWOING_K_CLASS_ENTROPY = Criterion(
 
 
 INFORMATION_GAIN = Criterion("InformationGain", information_gain)
+
+
+SLIQ_EXT_GINI = Criterion(
+    "SliqExt-Gini",
+    functools.partial(sliq_ext,
+                      split_impurity_fn=calculate_split_gini_index))
+
+
+SLIQ_EXT_ENTROPY = Criterion(
+    "SliqExt-Entropy",
+    functools.partial(sliq_ext,
+                      split_impurity_fn=calculate_information_gain))
