@@ -5,6 +5,7 @@
 
 import argparse
 import random
+import timeit
 
 import numpy as np
 
@@ -122,7 +123,9 @@ def remove_flipflop_from_name(criterion_name):
 
 def run_experiment(curr_tree_node, criterion, split_impurity_fn, node_impurity_fn, result_saver):
     """Runs the given experiment and saves it in the result_saver."""
+    start_time = timeit.default_timer()
     best_split = criterion.find_best_split_fn(tree_node=curr_tree_node, attrib_index=0)
+    total_time = timeit.default_timer() - start_time
     num_samples = curr_tree_node.dataset.num_samples
     contingency_table = curr_tree_node.contingency_tables[0].contingency_table
     num_samples_per_value = curr_tree_node.contingency_tables[0].num_samples_per_value
@@ -136,7 +139,7 @@ def run_experiment(curr_tree_node, criterion, split_impurity_fn, node_impurity_f
     largest_class_frequency = max(num_samples_per_class) / num_samples
     curr_experiment_info = experiment_info.ExperimentInfo(
         best_impurity_found, best_split.iteration_number, best_split.superclasses_largest_frequence,
-        largest_class_frequency)
+        largest_class_frequency, total_time)
     result_saver.store_result(
         num_values, num_classes, remove_flipflop_from_name(criterion.name), curr_experiment_info)
 

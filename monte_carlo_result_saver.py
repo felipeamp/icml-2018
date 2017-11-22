@@ -13,7 +13,7 @@ def write_csv_experiments_header(fout):
     """Writes csv_experiments header."""
     line_list = ["num_values", "num_classes", "experiment number", "method", "best impurity found",
                  "# iterations until convergence", "superclasses_largest_frequence",
-                 "largest_class_frequency"]
+                 "largest_class_frequency", "total_time"]
     print(','.join(line_list), file=fout)
 
 
@@ -113,7 +113,8 @@ class MonteCarloResultSaver(object):
                                          criterion_name, curr_experiment_info.impurity,
                                          curr_experiment_info.num_iterations,
                                          curr_experiment_info.superclasses_largest_frequence,
-                                         curr_experiment_info.largest_class_frequency])
+                                         curr_experiment_info.largest_class_frequency,
+                                         curr_experiment_info.total_time])
                         print(','.join(line_list), file=fout)
 
     def _save_csv_table(self, pair_num_values_classes, num_experiments, all_criteria):
