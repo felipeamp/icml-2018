@@ -9,6 +9,7 @@ import operator
 import random
 
 import numpy as np
+from sklearn import decomposition
 
 # import local_search
 import split
@@ -810,6 +811,75 @@ def random_class_partition_k_class_partition(tree_node, attrib_index, node_impur
     return best_split
 
 
+def group_values(contingency_table, num_samples_per_value):
+    """Groups values that have the same class probability vector."""
+    prob_matrix_transposed = np.divide(contingency_table.T, num_samples_per_value)
+    prob_matrix = prob_matrix_transposed.T
+    row_order = np.lexsort(prob_matrix_transposed[::-1])
+    compared_index = row_order[0]
+    new_index_to_old = [[compared_index]]
+    for index in row_order[1:]:
+        if np.allclose(prob_matrix[compared_index], prob_matrix[index]):
+            new_index_to_old[-1].append(index)
+        else:
+            compared_index = index
+            new_index_to_old.append([compared_index])
+    new_num_values = len(new_index_to_old)
+    num_classes = contingency_table.shape[1]
+    new_contingency_table = np.zeros((new_num_values, num_classes), dtype=int)
+    new_num_samples_per_value = np.zeros((new_num_values), dtype=int)
+    for new_index, old_indices in enumerate(new_index_to_old):
+        new_contingency_table[new_index] = np.sum(contingency_table[old_indices, :], axis=0)
+        new_num_samples_per_value[new_index] = np.sum(num_samples_per_value[old_indices])
+    return new_contingency_table, new_num_samples_per_value
+
+
+def pc_ext(tree_node, attrib_index, split_impurity_fn):
+    """Generates partition based on the PC-ext criterion."""
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[attrib_index].contingency_table
+    num_samples_per_value = tree_node.contingency_tables[attrib_index].num_samples_per_value
+    (new_contingency_table,
+     new_num_samples_per_value) = group_values(contingency_table, num_samples_per_value)
+    pca = decomposition.PCA(n_components=1)
+    principal_component = pca.fit(new_contingency_table).components_[0]
+    inner_product_results = np.dot(principal_component, new_contingency_table.T)
+    new_indices_order = inner_product_results.argsort()
+    best_split = split.Split()
+    left_values = set()
+    right_values = set(new_indices_order)
+    for metaindex, first_right in enumerate(new_indices_order):
+        curr_split_impurity = split_impurity_fn(num_samples, new_contingency_table,
+                                                new_num_samples_per_value, left_values,
+                                                right_values)
+        if curr_split_impurity < best_split.impurity:
+            curr_split = split.Split(left_values=left_values,
+                                     right_values=right_values,
+                                     impurity=curr_split_impurity)
+            best_split = curr_split
+        if left_values: # extended splits
+            last_left = new_indices_order[metaindex - 1]
+            left_values.remove(last_left)
+            right_values.add(last_left)
+            right_values.remove(first_right)
+            left_values.add(first_right)
+            curr_ext_split_impurity = split_impurity_fn(num_samples, new_contingency_table,
+                                                        new_num_samples_per_value, left_values,
+                                                        right_values)
+            if curr_ext_split_impurity < best_split.impurity:
+                curr_split = split.Split(left_values=left_values,
+                                         right_values=right_values,
+                                         impurity=curr_ext_split_impurity)
+                best_split = curr_split
+            right_values.remove(last_left)
+            left_values.add(last_left)
+            left_values.remove(first_right)
+            right_values.add(first_right)
+        right_values.remove(first_right)
+        left_values.add(first_right)
+    return best_split
+
+
 RANDOM_FLIPFLOP_GINI = Criterion(
     "Random-FlipFlop-Gini",
     functools.partial(flip_flop,
@@ -940,4 +1010,15 @@ SLIQ_EXT_GINI = Criterion(
 SLIQ_EXT_ENTROPY = Criterion(
     "SliqExt-Entropy",
     functools.partial(sliq_ext,
+                      split_impurity_fn=calculate_information_gain))
+
+
+PC_EXT_GINI = Criterion(
+    "PCExt-Gini",
+    functools.partial(pc_ext,
+                      split_impurity_fn=calculate_split_gini_index))
+
+PC_EXT_ENTROPY = Criterion(
+    "PCExt-Entropy",
+    functools.partial(pc_ext,
                       split_impurity_fn=calculate_information_gain))

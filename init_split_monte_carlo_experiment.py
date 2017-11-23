@@ -60,6 +60,9 @@ CRITERIA_AND_IMPURITY_FNS = [
     (criteria.SLIQ_EXT_GINI,
      criteria.calculate_split_gini_index,
      criteria.calculate_node_gini_index),
+    (criteria.PC_EXT_GINI,
+     criteria.calculate_split_gini_index,
+     criteria.calculate_node_gini_index),
 
     (criteria.RANDOM_FLIPFLOP_ENTROPY,
      criteria.calculate_information_gain,
@@ -91,7 +94,10 @@ CRITERIA_AND_IMPURITY_FNS = [
     (criteria.INFORMATION_GAIN,
      criteria.calculate_information_gain,
      criteria.calculate_information),
-    (criteria.SLIQ_EXT_GINI,
+    (criteria.SLIQ_EXT_ENTROPY,
+     criteria.calculate_information_gain,
+     criteria.calculate_information),
+    (criteria.PC_EXT_ENTROPY,
      criteria.calculate_information_gain,
      criteria.calculate_information)
     ]
