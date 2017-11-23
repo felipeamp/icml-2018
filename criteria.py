@@ -831,7 +831,7 @@ def group_values(contingency_table, num_samples_per_value):
     for new_index, old_indices in enumerate(new_index_to_old):
         new_contingency_table[new_index] = np.sum(contingency_table[old_indices, :], axis=0)
         new_num_samples_per_value[new_index] = np.sum(num_samples_per_value[old_indices])
-    return new_contingency_table, new_num_samples_per_value
+    return new_contingency_table, new_num_samples_per_value, new_index_to_old
 
 
 def pc_ext(tree_node, attrib_index, split_impurity_fn):
@@ -840,11 +840,14 @@ def pc_ext(tree_node, attrib_index, split_impurity_fn):
     contingency_table = tree_node.contingency_tables[attrib_index].contingency_table
     num_samples_per_value = tree_node.contingency_tables[attrib_index].num_samples_per_value
     (new_contingency_table,
-     new_num_samples_per_value) = group_values(contingency_table, num_samples_per_value)
+     new_num_samples_per_value,
+     new_index_to_old) = group_values(contingency_table, num_samples_per_value)
+
     pca = decomposition.PCA(n_components=1)
     principal_component = pca.fit(new_contingency_table).components_[0]
     inner_product_results = np.dot(principal_component, new_contingency_table.T)
     new_indices_order = inner_product_results.argsort()
+
     best_split = split.Split()
     left_values = set()
     right_values = set(new_indices_order)
@@ -853,10 +856,9 @@ def pc_ext(tree_node, attrib_index, split_impurity_fn):
                                                 new_num_samples_per_value, left_values,
                                                 right_values)
         if curr_split_impurity < best_split.impurity:
-            curr_split = split.Split(left_values=left_values,
-                                     right_values=right_values,
+            best_split = split.Split(left_values=set(left_values),
+                                     right_values=set(right_values),
                                      impurity=curr_split_impurity)
-            best_split = curr_split
         if left_values: # extended splits
             last_left = new_indices_order[metaindex - 1]
             left_values.remove(last_left)
@@ -867,16 +869,23 @@ def pc_ext(tree_node, attrib_index, split_impurity_fn):
                                                         new_num_samples_per_value, left_values,
                                                         right_values)
             if curr_ext_split_impurity < best_split.impurity:
-                curr_split = split.Split(left_values=left_values,
-                                         right_values=right_values,
+                best_split = split.Split(left_values=set(left_values),
+                                         right_values=set(right_values),
                                          impurity=curr_ext_split_impurity)
-                best_split = curr_split
             right_values.remove(last_left)
             left_values.add(last_left)
             left_values.remove(first_right)
             right_values.add(first_right)
         right_values.remove(first_right)
         left_values.add(first_right)
+    left_old_values = set()
+    for new_index in best_split.left_values:
+        left_old_values |= set(new_index_to_old[new_index])
+    right_old_values = set()
+    for new_index in best_split.right_values:
+        right_old_values |= set(new_index_to_old[new_index])
+    best_split.left_values = left_old_values
+    best_split.right_values = right_old_values
     return best_split
 
 
