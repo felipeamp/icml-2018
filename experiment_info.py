@@ -7,4 +7,5 @@ import collections
 
 ExperimentInfo = collections.namedtuple(
     "ExperimentInfo",
-    ["impurity", "num_iterations", "superclasses_largest_frequence", "largest_class_frequency"])
+    ["impurity", "num_iterations", "superclasses_largest_frequence", "largest_class_frequency",
+     "total_time"])
