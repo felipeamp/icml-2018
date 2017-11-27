@@ -18,13 +18,11 @@ import split
 import tree_node
 
 
-
 NUM_MONTE_CARLO_EXPERIMENTS = 10000
 
 PAIR_NUM_VALUES_CLASSES = [
-    (6, 3), (6, 9), (12, 3), (12, 9), (50, 3), (50, 9), (50, 30),
-    (50, 50), (100, 50), (100, 100), (200, 100),
-    (9, 50), (30, 50), (50, 100), (100, 200)]
+    (6, 3), (6, 9), (12, 3), (12, 9), (50, 3), (50, 9), (9, 50), (50, 30), (30, 50),
+    (50, 50), (100, 50), (50, 100), (100, 100), (200, 100), (100, 200)]
 
 CRITERIA_AND_IMPURITY_FNS = [
     (criteria.RANDOM_FLIPFLOP_GINI,
@@ -37,9 +35,6 @@ CRITERIA_AND_IMPURITY_FNS = [
      criteria.calculate_split_gini_index,
      criteria.calculate_node_gini_index),
     (criteria.RANDOM_CLASS_PARTITION_SUPERCLASS_GINI,
-     criteria.calculate_split_gini_index,
-     criteria.calculate_node_gini_index),
-    (criteria.TWOING_SUPERCLASS_GINI,
      criteria.calculate_split_gini_index,
      criteria.calculate_node_gini_index),
     (criteria.LARGEST_ALONE_K_CLASS_FLIPFLOP_GINI,
@@ -74,9 +69,6 @@ CRITERIA_AND_IMPURITY_FNS = [
      criteria.calculate_information_gain,
      criteria.calculate_information),
     (criteria.RANDOM_CLASS_PARTITION_SUPERCLASS_ENTROPY,
-     criteria.calculate_information_gain,
-     criteria.calculate_information),
-    (criteria.TWOING_SUPERCLASS_ENTROPY,
      criteria.calculate_information_gain,
      criteria.calculate_information),
     (criteria.LIST_SCHEDULING_K_CLASS_FLIPFLOP_ENTROPY,
