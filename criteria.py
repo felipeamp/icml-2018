@@ -9,7 +9,6 @@ import operator
 import random
 
 import numpy as np
-from sklearn import decomposition
 
 # import local_search
 import split
@@ -834,6 +833,63 @@ def group_values(contingency_table, num_samples_per_value):
     return new_contingency_table, new_num_samples_per_value, new_index_to_old
 
 
+def change_split_to_use_old_values(best_split_with_new_values, new_index_to_old):
+    """Change split values to use indices of original contingency table."""
+    left_old_values = set()
+    for new_index in best_split_with_new_values.left_values:
+        left_old_values |= set(new_index_to_old[new_index])
+    right_old_values = set()
+    for new_index in best_split_with_new_values.right_values:
+        right_old_values |= set(new_index_to_old[new_index])
+    best_split_with_new_values.left_values = left_old_values
+    best_split_with_new_values.right_values = right_old_values
+
+
+def get_principal_component(num_samples, contingency_table, num_samples_per_value):
+    """Returns the principal component of the weighted covariance matrix."""
+    num_samples_per_class = split.get_num_samples_per_class(contingency_table)
+    avg_prob_per_class = np.divide(num_samples_per_class, num_samples)
+    prob_matrix = contingency_table / num_samples_per_value[:, None]
+    diff_prob_matrix = (prob_matrix - avg_prob_per_class).T
+    weight_diff_prob = diff_prob_matrix * num_samples_per_value[None, :]
+    weighted_squared_diff_prob_matrix = np.dot(weight_diff_prob, diff_prob_matrix.T)
+    weighted_covariance_matrix = (1/(num_samples - 1)) * weighted_squared_diff_prob_matrix
+    eigenvalues, eigenvectors = np.linalg.eigh(weighted_covariance_matrix)
+    index_largest_eigenvalue = np.argmax(np.square(eigenvalues))
+    return eigenvectors[:, index_largest_eigenvalue]
+
+
+def pc(tree_node, attrib_index, split_impurity_fn):
+    """Generates partition based on the PC criterion."""
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[attrib_index].contingency_table
+    num_samples_per_value = tree_node.contingency_tables[attrib_index].num_samples_per_value
+    (new_contingency_table,
+     new_num_samples_per_value,
+     new_index_to_old) = group_values(contingency_table, num_samples_per_value)
+
+    principal_component = get_principal_component(
+        num_samples, new_contingency_table, new_num_samples_per_value)
+    inner_product_results = np.dot(principal_component, new_contingency_table.T)
+    new_indices_order = inner_product_results.argsort()
+
+    best_split = split.Split()
+    left_values = set()
+    right_values = set(new_indices_order)
+    for first_right in new_indices_order:
+        curr_split_impurity = split_impurity_fn(num_samples, new_contingency_table,
+                                                new_num_samples_per_value, left_values,
+                                                right_values)
+        if curr_split_impurity < best_split.impurity:
+            best_split = split.Split(left_values=set(left_values),
+                                     right_values=set(right_values),
+                                     impurity=curr_split_impurity)
+        right_values.remove(first_right)
+        left_values.add(first_right)
+    change_split_to_use_old_values(best_split, new_index_to_old)
+    return best_split
+
+
 def pc_ext(tree_node, attrib_index, split_impurity_fn):
     """Generates partition based on the PC-ext criterion."""
     num_samples = tree_node.dataset.num_samples
@@ -843,8 +899,8 @@ def pc_ext(tree_node, attrib_index, split_impurity_fn):
      new_num_samples_per_value,
      new_index_to_old) = group_values(contingency_table, num_samples_per_value)
 
-    pca = decomposition.PCA(n_components=1)
-    principal_component = pca.fit(new_contingency_table).components_[0]
+    principal_component = get_principal_component(
+        num_samples, new_contingency_table, new_num_samples_per_value)
     inner_product_results = np.dot(principal_component, new_contingency_table.T)
     new_indices_order = inner_product_results.argsort()
 
@@ -878,14 +934,7 @@ def pc_ext(tree_node, attrib_index, split_impurity_fn):
             right_values.add(first_right)
         right_values.remove(first_right)
         left_values.add(first_right)
-    left_old_values = set()
-    for new_index in best_split.left_values:
-        left_old_values |= set(new_index_to_old[new_index])
-    right_old_values = set()
-    for new_index in best_split.right_values:
-        right_old_values |= set(new_index_to_old[new_index])
-    best_split.left_values = left_old_values
-    best_split.right_values = right_old_values
+    change_split_to_use_old_values(best_split, new_index_to_old)
     return best_split
 
 
@@ -1022,10 +1071,21 @@ SLIQ_EXT_ENTROPY = Criterion(
                       split_impurity_fn=calculate_information_gain))
 
 
+PC_GINI = Criterion(
+    "PC-Gini",
+    functools.partial(pc, split_impurity_fn=calculate_split_gini_index))
+
+
+PC_ENTROPY = Criterion(
+    "PC-Entropy",
+    functools.partial(pc, split_impurity_fn=calculate_information_gain))
+
+
 PC_EXT_GINI = Criterion(
     "PCExt-Gini",
     functools.partial(pc_ext,
                       split_impurity_fn=calculate_split_gini_index))
+
 
 PC_EXT_ENTROPY = Criterion(
     "PCExt-Entropy",
