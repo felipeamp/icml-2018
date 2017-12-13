@@ -19,6 +19,7 @@ import tree_node
 
 
 NUM_MONTE_CARLO_EXPERIMENTS = 10000
+NUM_RANDOM_PARTITIONS_TO_TEST = 1
 
 PAIR_NUM_VALUES_CLASSES = [
     (6, 3), (6, 9), (12, 3), (12, 9), (50, 3), (50, 9), (9, 50), (50, 30), (30, 50),
@@ -158,6 +159,7 @@ def create_fake_tree_node(contingency_table):
 def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
     """Runs all experiments defined by the cartesian product of this module global variables."""
     criteria.MAX_ITERATIONS = 0
+    criteria.NUM_RANDOM_PARTITIONS_TO_TEST = NUM_RANDOM_PARTITIONS_TO_TEST
     result_saver = monte_carlo_result_saver.MonteCarloResultSaver(
         csv_experiments_filename, csv_table_filename, csv_output_dir, should_skip_experiment)
     attrib_gen = attribute_generator.RandomAttributeGenerator(SEED)
