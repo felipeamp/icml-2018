@@ -19,7 +19,9 @@ import tree_node
 
 
 NUM_MONTE_CARLO_EXPERIMENTS = 10000
-NUM_RANDOM_PARTITIONS_TO_TEST = 1
+
+USE_NUM_RANDOM_PARTITIONS_EQUAL_TO_NUM_VALUES_MINUS_ONE = True
+NUM_RANDOM_PARTITIONS_TO_TEST = 1 # Used if flag above is set to False
 
 PAIR_NUM_VALUES_CLASSES = [
     (6, 3), (6, 9), (12, 3), (12, 9), (50, 3), (50, 9), (9, 50), (50, 30), (30, 50),
@@ -159,7 +161,6 @@ def create_fake_tree_node(contingency_table):
 def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
     """Runs all experiments defined by the cartesian product of this module global variables."""
     criteria.MAX_ITERATIONS = 0
-    criteria.NUM_RANDOM_PARTITIONS_TO_TEST = NUM_RANDOM_PARTITIONS_TO_TEST
     result_saver = monte_carlo_result_saver.MonteCarloResultSaver(
         csv_experiments_filename, csv_table_filename, csv_output_dir, should_skip_experiment)
     attrib_gen = attribute_generator.RandomAttributeGenerator(SEED)
@@ -168,6 +169,10 @@ def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
             random.seed(SEED)
             print("num_values:", num_values)
             print("num_classes:", num_classes)
+            if USE_NUM_RANDOM_PARTITIONS_EQUAL_TO_NUM_VALUES_MINUS_ONE:
+                criteria.NUM_RANDOM_PARTITIONS_TO_TEST = num_values - 1
+            else:
+                criteria.NUM_RANDOM_PARTITIONS_TO_TEST = NUM_RANDOM_PARTITIONS_TO_TEST
             for experiment_num in range(NUM_MONTE_CARLO_EXPERIMENTS):
                 print("experiment_num:", experiment_num + 1)
                 contingency_table = attrib_gen.generate(num_values, num_classes)
