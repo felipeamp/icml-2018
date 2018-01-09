@@ -88,14 +88,14 @@ def calculate_split_gini_index(num_samples, contingency_table,
     right_gini = calculate_node_gini_index(num_right_samples,
                                            num_samples_per_class_right)
     # DEBUG:
-    print("num_left_samples:", num_left_samples)
-    print("num_right_samples:", num_right_samples)
-    print("num_samples_per_class_left:", num_samples_per_class_left)
-    print("num_samples_per_class_right:", num_samples_per_class_right)
-    print("left_gini:", left_gini)
-    print("right_gini:", right_gini)
-    print("child_gini:", ((num_left_samples / num_samples) * left_gini +
-                          (num_right_samples / num_samples) * right_gini))
+    # print("num_left_samples:", num_left_samples)
+    # print("num_right_samples:", num_right_samples)
+    # print("num_samples_per_class_left:", num_samples_per_class_left)
+    # print("num_samples_per_class_right:", num_samples_per_class_right)
+    # print("left_gini:", left_gini)
+    # print("right_gini:", right_gini)
+    # print("child_gini:", ((num_left_samples / num_samples) * left_gini +
+    #                       (num_right_samples / num_samples) * right_gini))
     return ((num_left_samples / num_samples) * left_gini +
             (num_right_samples / num_samples) * right_gini)
 
@@ -536,22 +536,38 @@ def create_nonempty_random_partition(num_values):
     return left_values, right_values
 
 
-def create_values_random_partition(tree_node, attrib_index, _,
+def create_values_random_partition(tree_node, attrib_index, node_impurity_fn,
                                    num_partitions_to_test=NUM_RANDOM_PARTITIONS_TO_TEST):
     """Get best random partition of [0, num_values) among num_partitions_to_test of them."""
-    num_values = tree_node.contingency_tables[attrib_index].contingency_table.shape[0]
+    num_samples = tree_node.dataset.num_samples
+    contingency_table = tree_node.contingency_tables[attrib_index].contingency_table
+    num_values = contingency_table.shape[0]
+    num_samples_per_value = tree_node.contingency_tables[attrib_index].num_samples_per_value
     assert num_partitions_to_test <= 2 ** (num_values - 1) - 1
     left_partitions_seen = set()
     best_split = split.Split()
     for _ in range(num_partitions_to_test):
+        left_values, left_values = None, None
         while True:
             left_values, right_values = create_nonempty_random_partition(num_values)
             left_values_as_str = ','.join(map(str, sorted(left_values)))
             if left_values_as_str not in left_partitions_seen:
                 left_partitions_seen.add(left_values_as_str)
                 break
+        num_left_samples, num_right_samples = split.get_num_samples_per_side(
+            num_samples, num_samples_per_value, left_values, right_values)
+        num_samples_per_class_left = split.get_num_samples_per_class_in_values(
+            contingency_table, left_values)
+        num_samples_per_class_right = split.get_num_samples_per_class_in_values(
+            contingency_table, right_values)
+        left_impurity = node_impurity_fn(num_left_samples, num_samples_per_class_left)
+        right_impurity = node_impurity_fn(num_right_samples, num_samples_per_class_right)
+        split_impurity = (
+            (num_left_samples / num_samples) * left_impurity +
+            (num_right_samples / num_samples) * right_impurity)
         curr_split = split.Split(left_values=left_values,
-                                 right_values=right_values)
+                                 right_values=right_values,
+                                 impurity=split_impurity)
         if curr_split.is_better_than(best_split):
             best_split = curr_split
     return best_split
@@ -926,14 +942,14 @@ def pc_ext(tree_node, attrib_index, split_impurity_fn):
     inner_product_results = np.dot(principal_component, new_contingency_table.T)
     new_indices_order = inner_product_results.argsort()
     # DEBUG
-    print("contingency_table:", contingency_table)
-    print("values_num_samples:", num_samples_per_value)
-    print("new_contingency_table:", new_contingency_table)
-    print("new_num_samples_per_value:", new_num_samples_per_value)
-    print("new_index_to_old:", new_index_to_old)
-    print("principal_component:", principal_component)
-    print("inner_product_results:", inner_product_results)
-    print("new_indices_order:", new_indices_order)
+    # print("contingency_table:", contingency_table)
+    # print("values_num_samples:", num_samples_per_value)
+    # print("new_contingency_table:", new_contingency_table)
+    # print("new_num_samples_per_value:", new_num_samples_per_value)
+    # print("new_index_to_old:", new_index_to_old)
+    # print("principal_component:", principal_component)
+    # print("inner_product_results:", inner_product_results)
+    # print("new_indices_order:", new_indices_order)
 
     best_split = split.Split()
     left_values = set()
