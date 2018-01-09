@@ -122,7 +122,7 @@ def remove_flipflop_from_name(criterion_name):
     return criterion_name.replace("-FlipFlop", "")
 
 
-def run_experiment(curr_tree_node, criterion, split_impurity_fn, node_impurity_fn, result_saver):
+def run_experiment(curr_tree_node, criterion, split_impurity_fn, _, result_saver):
     """Runs the given experiment and saves it in the result_saver."""
     start_time = timeit.default_timer()
     best_split = criterion.find_best_split_fn(tree_node=curr_tree_node, attrib_index=0)
@@ -157,6 +157,19 @@ def create_fake_tree_node(contingency_table):
         tree_node.ContingencyTable(contingency_table, num_samples_per_value)]
     return fake_tree_node
 
+def print_contingency_table(num_values, num_classes, experiment_num):
+    """Prints the contingency table for the given experiment."""
+    attrib_gen = attribute_generator.RandomAttributeGenerator(SEED)
+    random.seed(SEED)
+    contingency_table = None
+    for experiment_num in range(experiment_num):
+        contingency_table = attrib_gen.generate(num_values, num_classes)
+    np.set_printoptions(threshold=np.nan)
+    print("num_values:", num_values)
+    print("num_classes:", num_classes)
+    print("experiment_num:", experiment_num + 1)
+    print("contingency table:")
+    print(contingency_table)
 
 def main(csv_experiments_filename, csv_table_filename, csv_output_dir):
     """Runs all experiments defined by the cartesian product of this module global variables."""
@@ -197,6 +210,45 @@ if __name__ == '__main__':
     PARSER.add_argument(
         '--csv_output_dir',
         help='Path to directory to contain output files.')
-    main(PARSER.parse_args().csv_experiments_filename,
-         PARSER.parse_args().csv_table_filename,
-         PARSER.parse_args().csv_output_dir)
+    PARSER.add_argument(
+        '--print_contingency_table',
+        action='store_true',
+        help='Prints contingency table used in experiment with given number of values '
+             'and classes. Must set num_values, num_classes and experiment_num flags. '
+             'Experiments will NOT be executed if print_contingency_table flag is set.')
+    PARSER.add_argument(
+        '--num_values',
+        help='Number of values used in contingency table to be printed. Ignored if '
+             'print_contingency_table flag is not set.',
+        type=int)
+    PARSER.add_argument(
+        '--num_classes',
+        help='Number of classes used in contingency table to be printed. Ignored if '
+             'print_contingency_table flag is not set.',
+        type=int)
+    PARSER.add_argument(
+        '--experiment_num',
+        help='Experiment number of the contingency table to be printed. Starts at 1. '
+             'Ignored if print_contingency_table flag is not set.',
+        type=int)
+    if PARSER.parse_args().print_contingency_table:
+        if (PARSER.parse_args().num_values is None or
+                PARSER.parse_args().num_classes is None or
+                PARSER.parse_args().experiment_num is None):
+            print('When using print_contingency_table you must also set the flags '
+                  'for num_values, num_classes and experiment_num.')
+        else:
+            print_contingency_table(PARSER.parse_args().num_values,
+                                    PARSER.parse_args().num_classes,
+                                    PARSER.parse_args().experiment_num)
+    else:
+        if (PARSER.parse_args().csv_experiments_filename is None or
+                PARSER.parse_args().csv_table_filename is None or
+                PARSER.parse_args().csv_output_dir is None):
+            print('To run experiments you must set the flags '
+                  'for csv_experiments_filename, csv_table_filename and '
+                  'csv_output_dir.')
+        else:
+            main(PARSER.parse_args().csv_experiments_filename,
+                 PARSER.parse_args().csv_table_filename,
+                 PARSER.parse_args().csv_output_dir)
